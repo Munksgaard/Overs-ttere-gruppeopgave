@@ -1,0 +1,473 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage{pslatex,a4wide}
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{moreverb}
+
+\title{Eksempel på brug af MosML-lex og MosML-yacc}
+
+\author{Torben Mogensen}
+
+\date{September 2002}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduktion}
+
+Som eksempel på brug af lexer- og parsergeneratorerne i Moscow ML,
+viser vi hvordan de kan bruges til at indlæse og beregne regneudtryk.
+
+Vi starter med at definere grammatikken for sproget:
+
+\renewcommand{\arraystretch}{0.93}
+
+\[\begin{array}{lcl}
+
+Defs & \rightarrow & \\
+Defs & \rightarrow & Def Defs \\
+\\
+Def  & \rightarrow & {\bf id}~=~Exp \\
+\\
+Exp & \rightarrow & {\bf num} \\
+Exp & \rightarrow & {\bf float} \\
+Exp & \rightarrow & {\bf id}\\
+Exp & \rightarrow & Exp~{\tt +}~Exp \\
+Exp & \rightarrow & Exp~{\tt -}~Exp \\
+Exp & \rightarrow & Exp~{\tt *}~Exp \\
+Exp & \rightarrow & Exp~{\tt /}~Exp \\
+Exp & \rightarrow & {\tt -}~Exp \\
+Exp & \rightarrow & Exp~{\tt =}~Exp \\
+Exp & \rightarrow & Exp~{\tt and}~Exp \\
+Exp & \rightarrow & Exp~{\tt or}~Exp \\
+Exp & \rightarrow & {\tt not}~Exp \\
+Exp & \rightarrow & {\tt if}~Exp~{\tt then}~Exp~{\tt else}~Exp \\
+Exp & \rightarrow & {\tt (}~Exp~{\tt )}
+\end{array}\]
+
+\renewcommand{\arraystretch}{1}
+
+
+\noindent
+Her gælder de sædvanlige præcedensregler:
+
+\begin{itemize}
+
+\item {\tt +, -, *} og {\tt /} er venstreassociative.
+
+\item {\tt *} og {\tt /} binder stærkere end {\tt +} og {\tt -}.
+
+\item Unært minus binder stærkere end {\tt *} og {\tt /}.
+
+\item {\tt =} er ikke-associativ og binder svagere end {\tt +} og {\tt
+-}.
+
+\item {\tt not} binder svagere end {\tt =}.
+
+\item {\tt and} binder svagere end {\tt not} og er højreassociativ.
+
+\item {\tt or} binder svagere end {\tt and} og er højreassociativ.
+
+\end{itemize}
+
+\noindent 
+Endvidere strækker udtrykket efter {\tt else} sig så langt som
+muligt. Det svarer til at {\tt else} har lavere prioritet end alle
+regneoperatorer.
+
+Heltalskonstanter og floating-point konstanter er som i SML, dog uden
+mulighed for at bruge hexadecimal notation for heltal. Specielt er
+negativt fortegn skrevet som ``\verb`~`''.
+
+Kommentarer starter med ``\verb`\`'' og strækker sig til næste
+linieskift.
+
+Semantikken for sproget er, at en række definitioner af variabler
+indlæses og beregnes og værdien af hver definition udskrives.
+
+\section{Abstrakt syntaks}
+
+Et ``program'' i ovenstående sprog vil indlæses som abstrakt syntaks,
+og beregningerne sker på denne syntaks.
+
+Vi repræsenterer et program som en liste af definitioner, hvor hver
+definition er et par af et variabelnavn (en string) og et udtryk.
+
+Udtryk repræsenteres med en datatype, der har en konstruktor for hver
+slags udtryk undtagen parentesudtryk. Hvert udtryk har udover
+deludtryk, samt attributter for navne og tal også en
+positionsangivelse, som består af linienummer og position på linien.
+
+De relevante erklæringer samles i en struktur {\tt Syntax.sml}:
+
+\renewcommand{\baselinestretch}{0.7}
+\verbatiminput{Syntax.sml}
+\renewcommand{\baselinestretch}{1}
+
+\noindent
+Man oversætter denne fil med kommandoen
+
+
+\renewcommand{\baselinestretch}{0.7}
+\begin{verbatim}
+
+> mosmlc -c Syntax.sml
+
+\end{verbatim}
+\renewcommand{\baselinestretch}{1}
+
+
+\section{Parserdefinitionen}
+
+En parserdefinition i MosML-yacc består af flere sektioner, hvor nogle
+kan udelades. Se {\em Moscow ML Owner's Manual} for en komplet
+beskrivelse, her medtager vi blot dem vi skal bruge. Vi starter med at
+erklære de {\em tokens}, vi har brug for. Vi skal bruge en for hvert
+terminalsymbol i grammatikken samt for end-of-file ({\tt EOF}). Hver
+token gives et navn og en type. Typen er for de fleste tokens
+vedkommende bare en positionsangivelse, men tokens for talkonstanter
+og variablenavne har også deres værdi med:
+
+\renewcommand{\baselinestretch}{0.7}
+\begin{verbatim}
+
+%token <int*(int*int)> NUM
+%token <real*(int*int)> FLOAT
+%token <string*(int*int)> ID
+%token <(int*int)> IF THEN ELSE AND OR NOT EQ
+%token <(int*int)> PLUS MINUS TIMES DIVIDE LPAR RPAR EOF
+
+\end{verbatim}
+\renewcommand{\baselinestretch}{1}
+
+\noindent
+Herefter erklærer vi præcedens af regneoperatorer samt {\tt else}:
+
+\renewcommand{\baselinestretch}{0.7}
+\begin{verbatim}
+
+%nonassoc ELSE
+%right OR
+%right AND
+%nonassoc NOT
+%nonassoc EQ
+%left PLUS MINUS
+%left TIMES DIVIDE
+%nonassoc UMINUS
+
+\end{verbatim}
+\renewcommand{\baselinestretch}{1}
+
+\noindent
+Læg mærke til erklæringen af {\tt UMINUS}. Der er ikke nogen token med
+det navn, men vi skal bruge den til lokalt at ændre præcedens for {\tt
+MINUS} i produktionen for unært minus, se senere. Foranstillede
+operatorer er her erklæret som ikke-associative. Det er egentligt
+ligegyldigt hvilken asssociativitet de gives, da associativitet kun
+giver mening for mellemstillede operatorer.
+
+Efter præcedenserklæringerne, erklærer vi nonterminalerne. Vi starter
+med at angive startsymbolet og angiver derefter type for alle
+nonterminaler:
+
+\renewcommand{\baselinestretch}{0.7}
+\begin{verbatim}
+
+%start Defs
+%type <Syntax.Pgm> Defs
+%type <Syntax.Def> Def
+%type <Syntax.Exp> Exp
+
+\end{verbatim}
+\renewcommand{\baselinestretch}{1}
+
+\noindent
+Erklæringerne angiver typen af den abstrakte syntaks for hver
+nonterminal.
+
+Til sidst, efterfulgt af ``\verb`%%`'' kommer produktionerne i
+grammatikken. Den første produktion for hver nonterminal angives med
+nonterminalens navn, kolon, højresiden og til sidst en parseraktion
+angivet mellem krølleparenteser. De efterfølgende produktioner for
+samme nonterminal angiver ikke nonterminalens navn, men bruger
+symbolet ``\verb`|`''. Produktionerne for en nonterminal afsluttes med
+semikolon. Dette skulle fremgå tydeligt af nedenstående eksempel:
+
+\renewcommand{\baselinestretch}{0.7}
+\begin{verbatim}
+
+%%
+
+Defs:
+          EOF           { [] }
+        | Def Defs      { $1 :: $2 }
+;
+
+Def:
+          ID EQ Exp     { (#1 $1,$3) }
+;
+
+Exp:
+          NUM           { Syntax.ICONST (#1 $1, #2 $1) }
+        | FLOAT         { Syntax.FCONST (#1 $1, #2 $1) }
+        | ID            { Syntax.ID (#1 $1, #2 $1) }
+        | Exp PLUS Exp  { Syntax.PLUS ($1,$3, $2) }
+        | Exp MINUS Exp { Syntax.MINUS ($1,$3, $2) }
+        | Exp TIMES Exp { Syntax.TIMES ($1,$3, $2) }
+        | Exp DIVIDE Exp
+                        { Syntax.DIVIDE ($1,$3, $2) }
+        | MINUS Exp %prec UMINUS
+                        { Syntax.UMINUS ($2, $1) }
+        | Exp EQ Exp    { Syntax.EQ ($1,$3, $2) }
+        | Exp AND Exp   { Syntax.AND ($1,$3, $2) }
+        | Exp OR Exp    { Syntax.PLUS ($1,$3, $2) }
+        | NOT Exp       { Syntax.NOT ($2, $1) }
+        | IF Exp THEN Exp ELSE Exp
+                        { Syntax.IF ($2,$4,$6, $1) }
+        | LPAR Exp RPAR { $2 }
+;
+
+\end{verbatim}
+\renewcommand{\baselinestretch}{1}
+
+\noindent
+Læg mærke til produktionen for foranstillet (unært) minus. Her er
+præcedens lokalt ændret til at være {\tt UMINUS}'s præcedens ved
+hjælp af erklæringen \verb`%prec UMINUS`. Læg også mærke til at vi
+sørger for at listen af definitioner, der udgør programmet, afsluttes
+med {\tt EOF}.
+
+Aktionen for en produktion (angivet mellem krølleparenteser) er et SML
+udtryk, der bygger værdien af produktionen, typisk den abstrakte
+syntaks.  Symbolerne \verb`$1`, \verb`$2` osv.\ er en speciel slags
+variabler, der indeholder attributterne (værdierne) for hhv.\ det
+første, andet osv.\ symbol på højresiden.
+
+Aktionerne for {\tt Defs} bygger en liste af definitioner: Ved {\tt
+EOF} returneres den tomme liste og ved den anden produktion sættes
+definitionen, som {\tt Def} returnerer foran listen, som det rekursive
+kald til {\tt Defs} returnerer.
+
+I produktionen for {\tt Def} har {\tt ID} (som erklæret tidligere) en
+attribut, der er et par af et variabelnavn og en position. Med
+udtrykket \verb`#1 $1` trækkes navnet ud af denne attribut. Navnet
+sættes i et par sammen med udtrykket, som findes som attribut for
+nonterminalen {\tt Exp}. Da den er tredie symbol på højresiden, bruges
+\verb`$3` til at hente denne attribut.
+
+Produktionerne for {\tt Exp} har aktioner, der bygger den abstrakte
+syntaks. Læg mærke til at vi sætter modulnavnet {\tt Syntax} foran
+konstruktorerne. Den abstrakte syntaks har en positionsangivelse for
+hvert udtryk. Dette findes ved at tage positionsattributten for en af
+de tokens, der indgår på højresiden, typisk den første af disse. De
+fleste tokens har kun positionen som attribut, og denne hentes bare
+ved brug af den relevante dollarvariabel. Talkonstanter og
+variabelnavne har også deres værdi/navn som attribut, så de relevante
+dele hentes med operatorerne \verb`#1` og \verb`#2`.
+
+Læg til sidst mærke til aktionen for udtryk i parentes. Den returnerer
+bare den abstrakte syntaks for det udtryk, der er i parentesen.
+Parentesen kan altså ikke ses i de abstrakte syntaks. Det er heller
+ikke nødvendigt, da formålet med parenteserne kun er at sørge for at
+den rigtige gruppering opnås under syntaksanalysen.
+
+Hele parseerdefinitionen findes i filen {\tt Parser.grm}. Parseren
+genereres med kaldet
+
+\renewcommand{\baselinestretch}{0.7}
+\begin{verbatim}
+
+> mosmlyac -v Parser.grm
+
+\end{verbatim}
+\renewcommand{\baselinestretch}{1}
+
+\noindent
+Dette kald genererer filerne {\tt Parser.sig, Parser.sml} og {\tt
+Parser.output}. Hvis der er konflikter, vil {\tt mosmlyac} angive
+antallet og typen af konflikter. I givet fald kan man bruge filen
+{\tt Parser.output}, der indeholder en beskrivelse af den genererede
+parserautomat, inklusive hvilke NFA tilstande, der indgår i hver DFA
+tilstand (se ``Basics of Compiler Design'', afsnit 3.14 og 3.15.3).
+{\tt mosmlyac} kan også rapportere andre slags fejl. Det vil i reglen
+klart fremgå af fejlmeddelelsen, hvad der er galt.
+
+Parseren oversættes med kommandoerne
+
+\renewcommand{\baselinestretch}{0.7}
+\begin{verbatim}
+
+> mosmlc -c Parser.sig
+> mosmlc -c Parser.sml
+
+\end{verbatim}
+\renewcommand{\baselinestretch}{1}
+
+\noindent
+Oversættelsen af {\tt Parser.sig} giver en {\em compliance warning}.
+Den kan ignoreres. Hvis der meldes syntaksfejl eller typefejl ved
+oversættelse af {\tt Parser.sml}, ligger problemet som regel i
+parseraktionerne eller i erklæring af tokens eller nonterminaler.
+
+Husk at {\tt Syntax.sml} skal oversættes først.  Lav evt.\ en {\tt
+  makefile}.
+
+\section{Lexerdefinitionen}
+
+Lexerdefinitionen er vist i figur~\ref{lexer}. Vi gennemgår detaljerne
+herunder.
+
+\begin{figure}
+
+\renewcommand{\baselinestretch}{0.7}
+\verbatiminput{Lexer.lex}
+\renewcommand{\baselinestretch}{1}
+
+\caption{Lexerdefinitionen {\tt Lexer.lex}\label{lexer}}
+\end{figure}
+
+Udover at give parseren en sekvens af tokens, skal lexeren også angive
+positionen for hver af disse. MosML-Lex giver mulighed for at finde
+positionen af en token målt som antal tegn siden starten af inddata.
+Det er mere brugbart at have positionen som linienummer og position på
+denne linie, så vi definerer nogle hjælpefunktioner i lexeren til at
+holde styr på dette. Kort sagt har vi to globale variabler: {\tt
+  currentLine} angiver det nuværende linienummer og {\tt lineStartPos}
+angiver positionerne af starten af linierne (målt som antal tegn fra
+starten af teksten). Når vi læser et linieskifttegn, tæller vi op i
+{\tt currentLine} og tilføjer den nuværende position til {\tt
+  lineStartPos}.  Funktionen {\tt getPos} returnerer et par bestående
+af {\tt currentLine} og positionen på linien.
+
+Vi skal også kunne rapportere leksikalske fejl. Til det formål
+erklærer vi en {\em exception} {\tt LexicalError} og en hjælpefunktion
+{\tt lexerError}. Vi vil senere se, hvordan vi fanger denne {\em
+exception}.
+
+Dernæst erklærer vi en hjælpefunktion {\tt keyword}. Denne bruges til
+at genkende nøgleord: Alle alfanumeriske tegnfølger, der starter med
+et bogstav genkendes med et regulært udtryk, og hjælpefunktionen
+finder ud af om der er tale om et nøgleord eller en variabel og
+returnerer den passende token. Læg mærke til at vi sætter modulnavnet
+{\tt Parser} foran hvert tokennavn og giver positionen med som
+attribut. {\tt Parser.ID} har endvidere navnet med som attribut.
+
+Derefter følger de regulære udtryk, der definerer tokens. Notationen
+minder om notationen for produktioner: Hver linie indeholder et
+regulært udtryk og en aktion i krølleparenteser, og linierne adskilles
+med ``\verb`|`'' og afsluttes med semikolon. Aktionerne er SML udtryk,
+som returnerer værdien af den genkendte token. Hvis man ikke vil
+returnere en token (f.eks. hvis det genkendte er en kommentar eller
+blanktegn), skriver man ``{\tt Token lexbuf}'' for at kalde lexeren
+igen for at finde næste token. Det ses f.eks.\ i den første definition,
+der skipper {\em whitespace} (bestående af blanktegn, tabulatortegn og
+vognretur). En komplet liste af escape-sekvenser kan ses i ``Moscow ML
+Owner's Manual''. Læg mærke til at enkelttegn er omsluttet af {\em
+backquotes}, ikke almindelige anførselstegn.
+
+Den næste definition behandler linieskift (tegn 12, {\em form feed})
+betragtes her også som liniskift). Det er også {\em whitespace}, der
+skal skippes, men inden lexeren kaldes igen opdateres variablerne {\tt
+currentLine} og {\tt lineStartPos}.
+
+Dernæst behandles kommentarer. De består af et {\em backslash} og
+fortsætter til næste linieskift. Derfor angives tegnene efter {\em
+backslash}'et som {\em alt andet end linieskift}. Dette gøres ved at
+starte en liste af tegn med symbolet ``\verb`^`'', som inverterer
+den efterfølgende mængde af tegn.
+
+Så kommer vi til de egentlige tokens. Først heltalskonstanter, der
+består af en ikke-tom følge af cifre, muligvis med et foranstillet
+minustegn. Her bruges SML's unære minus, som skrives som en tilde
+(``\verb`~`''). For at få værdien kaldes SML funktionen {\tt
+Int.fromString}, som konverterer en tegnfølge til et heltal. Hvis
+tallet er for stort eller der er andre fejl, returneres {\tt NONE},
+som her giver anledning til en leksikalsk fejl.
+
+Floating point konstanter behandles på lignende måde, men det regulære
+udtryk er noget mere kompliceret. Pånær brugen af {\em backquotes} til
+at omslutte enkelttegn er notationen den samme som i ``Basics of
+Compiler Design''. Der er overlap mellem heltalskonstanter og
+floating-point konstanter. Da definitionen for heltalskonstanter er
+angivet først, vil tegnfølger i fællesmængden blive genkendt som
+heltal.
+
+Hernæst behandles navne. De begynder med et bogstav
+og fortsætter med bogstaver eller cifre. Som tidligere nævnt, bruger
+vi hjælpefunktionen {\tt keyword} til at udskille nøgleord. Derefter
+følger en række enkelttegn tokens og {\tt eof}, der angiver {\tt
+end-of-file}. Til sidst er der et {\em default pattern}, der matcher
+alt det, der ikke matches af de ovenstående definitioner. Det giver
+anledning til en leksikalsk fejl.
+
+Der er enkelte linier i lexerdefinitionen, som ikke er beskrevet
+herover. De kan betragtes som en række besværgelser, der bare skal
+være der for at det virker. Lexeren genereres og oversættes med kaldet
+
+\renewcommand{\baselinestretch}{0.7}
+\begin{verbatim}
+
+> mosmllex Lexer.lex
+> mosmlc -c Lexer.sml
+
+\end{verbatim}
+\renewcommand{\baselinestretch}{1}
+
+\noindent
+{\tt mosmllex} vil ved succesfuld kørsel angive antallet af
+DFA-tilstande og aktioner. Sidstnævnte er antallet af
+lexer-definitioner (med tilhørende aktioner). Husk at parseren skal
+være oversat før lexeren kan oversættes, da lexeren bruger tokennavne,
+der er erklæret i {\tt Parser.sig}.
+
+\section{Fortolkeren}
+
+Fortolkeren findes i filerne {\tt Interpreter.sig} og {\tt
+Interpreter.sml}. De er for store at inkludere her, men læg mærke til
+at positionsangivelserne i den abstrakte syntaks bruges når der
+rapporteres fejl.
+
+\section{Hovedprogrammet}
+
+For at samle trådene laves et hovedprogram, der læser en fil og kalder
+lexer og parser med denne. Hovedprogrammet ses i figur~\ref{main}.
+Programmet består i det væsentlige af sort magi, der åbner
+inddatastrømme, kalder lexer og parser og behandler {\em
+exceptions}. Læg dog mærke til at parseren kaldes ved at angive
+startsymbolet ({\tt Parser.Defs}) og at den har lexerens startsymbol
+({\tt Lexer.Token}) og inddatastrømmen som argumenter.
+
+Hovedprogram oversættes med kommandoen
+
+\renewcommand{\baselinestretch}{0.7}
+\begin{verbatim}
+
+> mosmlc -o Main Main.sml
+
+\end{verbatim}
+\renewcommand{\baselinestretch}{1}
+
+\noindent
+{\tt Main} køres fra kommandolinien med et filnavn som argument. Den
+angivne fil (f.eks. {\tt test.defs}) indlæses og køres gennem lexer og
+parser. Hvis der findes fejl under lexing eller parsing, rapporteres
+disse. Ellers beregnes definitionerne og værdierne af hver variabel
+udskrives. Hvis der opdages typefejl e.lign. på køretid, rapporteres
+disse på det tidspunkt, de findes.
+
+Filerne {\tt error1.defs}, {\tt error2.defs} og {\tt error3.defs}
+indeholder fejlbehæftede definitioner. Når Main kaldes med disse
+filer, rapporteres fejl.
+
+\begin{figure}
+
+\renewcommand{\baselinestretch}{0.7}
+\verbatiminput{Main.sml}
+\renewcommand{\baselinestretch}{1}
+
+\caption{Hovedprogrammet {\tt Main.sml}\label{main}}
+\end{figure}
+
+\end{document}

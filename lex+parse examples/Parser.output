@@ -1,0 +1,645 @@
+   0  $accept : %entry% $end
+
+   1  Defs : EOF
+   2       | Def Defs
+
+   3  Def : ID EQ Exp
+
+   4  Exp : NUM
+   5      | FLOAT
+   6      | ID
+   7      | Exp PLUS Exp
+   8      | Exp MINUS Exp
+   9      | Exp TIMES Exp
+  10      | Exp DIVIDE Exp
+  11      | MINUS Exp
+  12      | Exp EQ Exp
+  13      | Exp AND Exp
+  14      | Exp OR Exp
+  15      | NOT Exp
+  16      | IF Exp THEN Exp ELSE Exp
+  17      | LPAR Exp RPAR
+
+  18  %entry% : '\001' Defs
+
+state 0
+	$accept : . %entry% $end  (0)
+
+	'\001'  shift 1
+	.  error
+
+	%entry%  goto 2
+
+
+state 1
+	%entry% : '\001' . Defs  (18)
+
+	EOF  shift 3
+	ID  shift 4
+	.  error
+
+	Defs  goto 5
+	Def  goto 6
+
+
+state 2
+	$accept : %entry% . $end  (0)
+
+	$end  accept
+
+
+state 3
+	Defs : EOF .  (1)
+
+	.  reduce 1
+
+
+state 4
+	Def : ID . EQ Exp  (3)
+
+	EQ  shift 7
+	.  error
+
+
+state 5
+	%entry% : '\001' Defs .  (18)
+
+	.  reduce 18
+
+
+state 6
+	Defs : Def . Defs  (2)
+
+	EOF  shift 3
+	ID  shift 4
+	.  error
+
+	Defs  goto 8
+	Def  goto 6
+
+
+state 7
+	Def : ID EQ . Exp  (3)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 16
+
+
+state 8
+	Defs : Def Defs .  (2)
+
+	.  reduce 2
+
+
+state 9
+	Exp : FLOAT .  (5)
+
+	.  reduce 5
+
+
+state 10
+	Exp : ID .  (6)
+
+	.  reduce 6
+
+
+state 11
+	Exp : IF . Exp THEN Exp ELSE Exp  (16)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 17
+
+
+state 12
+	Exp : LPAR . Exp RPAR  (17)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 18
+
+
+state 13
+	Exp : MINUS . Exp  (11)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 19
+
+
+state 14
+	Exp : NOT . Exp  (15)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 20
+
+
+state 15
+	Exp : NUM .  (4)
+
+	.  reduce 4
+
+
+state 16
+	Def : ID EQ Exp .  (3)
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+
+	AND  shift 21
+	DIVIDE  shift 22
+	EQ  shift 23
+	MINUS  shift 24
+	OR  shift 25
+	PLUS  shift 26
+	TIMES  shift 27
+	EOF  reduce 3
+	ID  reduce 3
+
+
+state 17
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+	Exp : IF Exp . THEN Exp ELSE Exp  (16)
+
+	AND  shift 21
+	DIVIDE  shift 22
+	EQ  shift 23
+	MINUS  shift 24
+	OR  shift 25
+	PLUS  shift 26
+	THEN  shift 28
+	TIMES  shift 27
+	.  error
+
+
+state 18
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+	Exp : LPAR Exp . RPAR  (17)
+
+	AND  shift 21
+	DIVIDE  shift 22
+	EQ  shift 23
+	MINUS  shift 24
+	OR  shift 25
+	PLUS  shift 26
+	RPAR  shift 29
+	TIMES  shift 27
+	.  error
+
+
+state 19
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : MINUS Exp .  (11)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+
+	AND  reduce 11
+	DIVIDE  reduce 11
+	ELSE  reduce 11
+	EOF  reduce 11
+	EQ  reduce 11
+	ID  reduce 11
+	MINUS  reduce 11
+	OR  reduce 11
+	PLUS  reduce 11
+	RPAR  reduce 11
+	THEN  reduce 11
+	TIMES  reduce 11
+
+
+state 20
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+	Exp : NOT Exp .  (15)
+
+	DIVIDE  shift 22
+	EQ  shift 23
+	MINUS  shift 24
+	PLUS  shift 26
+	TIMES  shift 27
+	AND  reduce 15
+	ELSE  reduce 15
+	EOF  reduce 15
+	ID  reduce 15
+	OR  reduce 15
+	RPAR  reduce 15
+	THEN  reduce 15
+
+
+state 21
+	Exp : Exp AND . Exp  (13)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 30
+
+
+state 22
+	Exp : Exp DIVIDE . Exp  (10)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 31
+
+
+state 23
+	Exp : Exp EQ . Exp  (12)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 32
+
+
+state 24
+	Exp : Exp MINUS . Exp  (8)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 33
+
+
+state 25
+	Exp : Exp OR . Exp  (14)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 34
+
+
+state 26
+	Exp : Exp PLUS . Exp  (7)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 35
+
+
+state 27
+	Exp : Exp TIMES . Exp  (9)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 36
+
+
+state 28
+	Exp : IF Exp THEN . Exp ELSE Exp  (16)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 37
+
+
+state 29
+	Exp : LPAR Exp RPAR .  (17)
+
+	.  reduce 17
+
+
+state 30
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp AND Exp .  (13)
+	Exp : Exp . OR Exp  (14)
+
+	AND  shift 21
+	DIVIDE  shift 22
+	EQ  shift 23
+	MINUS  shift 24
+	PLUS  shift 26
+	TIMES  shift 27
+	ELSE  reduce 13
+	EOF  reduce 13
+	ID  reduce 13
+	OR  reduce 13
+	RPAR  reduce 13
+	THEN  reduce 13
+
+
+state 31
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp DIVIDE Exp .  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+
+	AND  reduce 10
+	DIVIDE  reduce 10
+	ELSE  reduce 10
+	EOF  reduce 10
+	EQ  reduce 10
+	ID  reduce 10
+	MINUS  reduce 10
+	OR  reduce 10
+	PLUS  reduce 10
+	RPAR  reduce 10
+	THEN  reduce 10
+	TIMES  reduce 10
+
+
+state 32
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp EQ Exp .  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+
+	DIVIDE  shift 22
+	MINUS  shift 24
+	PLUS  shift 26
+	TIMES  shift 27
+	AND  reduce 12
+	ELSE  reduce 12
+	EOF  reduce 12
+	ID  reduce 12
+	OR  reduce 12
+	RPAR  reduce 12
+	THEN  reduce 12
+
+
+state 33
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp MINUS Exp .  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+
+	DIVIDE  shift 22
+	TIMES  shift 27
+	AND  reduce 8
+	ELSE  reduce 8
+	EOF  reduce 8
+	EQ  reduce 8
+	ID  reduce 8
+	MINUS  reduce 8
+	OR  reduce 8
+	PLUS  reduce 8
+	RPAR  reduce 8
+	THEN  reduce 8
+
+
+state 34
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+	Exp : Exp OR Exp .  (14)
+
+	AND  shift 21
+	DIVIDE  shift 22
+	EQ  shift 23
+	MINUS  shift 24
+	OR  shift 25
+	PLUS  shift 26
+	TIMES  shift 27
+	ELSE  reduce 14
+	EOF  reduce 14
+	ID  reduce 14
+	RPAR  reduce 14
+	THEN  reduce 14
+
+
+state 35
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp PLUS Exp .  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+
+	DIVIDE  shift 22
+	TIMES  shift 27
+	AND  reduce 7
+	ELSE  reduce 7
+	EOF  reduce 7
+	EQ  reduce 7
+	ID  reduce 7
+	MINUS  reduce 7
+	OR  reduce 7
+	PLUS  reduce 7
+	RPAR  reduce 7
+	THEN  reduce 7
+
+
+state 36
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp TIMES Exp .  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+
+	AND  reduce 9
+	DIVIDE  reduce 9
+	ELSE  reduce 9
+	EOF  reduce 9
+	EQ  reduce 9
+	ID  reduce 9
+	MINUS  reduce 9
+	OR  reduce 9
+	PLUS  reduce 9
+	RPAR  reduce 9
+	THEN  reduce 9
+	TIMES  reduce 9
+
+
+state 37
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+	Exp : IF Exp THEN Exp . ELSE Exp  (16)
+
+	AND  shift 21
+	DIVIDE  shift 22
+	ELSE  shift 38
+	EQ  shift 23
+	MINUS  shift 24
+	OR  shift 25
+	PLUS  shift 26
+	TIMES  shift 27
+	.  error
+
+
+state 38
+	Exp : IF Exp THEN Exp ELSE . Exp  (16)
+
+	FLOAT  shift 9
+	ID  shift 10
+	IF  shift 11
+	LPAR  shift 12
+	MINUS  shift 13
+	NOT  shift 14
+	NUM  shift 15
+	.  error
+
+	Exp  goto 39
+
+
+state 39
+	Exp : Exp . PLUS Exp  (7)
+	Exp : Exp . MINUS Exp  (8)
+	Exp : Exp . TIMES Exp  (9)
+	Exp : Exp . DIVIDE Exp  (10)
+	Exp : Exp . EQ Exp  (12)
+	Exp : Exp . AND Exp  (13)
+	Exp : Exp . OR Exp  (14)
+	Exp : IF Exp THEN Exp ELSE Exp .  (16)
+
+	AND  shift 21
+	DIVIDE  shift 22
+	EQ  shift 23
+	MINUS  shift 24
+	OR  shift 25
+	PLUS  shift 26
+	TIMES  shift 27
+	ELSE  reduce 16
+	EOF  reduce 16
+	ID  reduce 16
+	RPAR  reduce 16
+	THEN  reduce 16
+
+
+21 terminals, 5 nonterminals
+19 grammar rules, 40 states

@@ -1,0 +1,51 @@
+
+%token <int*(int*int)> NUM
+%token <real*(int*int)> FLOAT
+%token <string*(int*int)> ID
+%token <(int*int)> IF THEN ELSE AND OR NOT EQ
+%token <(int*int)> PLUS MINUS TIMES DIVIDE LPAR RPAR EOF
+
+%nonassoc ELSE
+%right OR
+%right AND
+%nonassoc NOT
+%nonassoc EQ
+%left PLUS MINUS
+%left TIMES DIVIDE
+%nonassoc UMINUS
+
+%start Defs
+%type <Syntax.Pgm> Defs
+%type <Syntax.Def> Def
+%type <Syntax.Exp> Exp
+
+%%
+
+Defs:
+	  EOF           { [] }
+        | Def Defs      { $1 :: $2 }
+;
+
+Def:
+	  ID EQ Exp     { (#1 $1,$3) }
+;
+
+Exp:
+	  NUM           { Syntax.ICONST (#1 $1, #2 $1) }
+        | FLOAT		{ Syntax.FCONST (#1 $1, #2 $1) }
+        | ID		{ Syntax.ID (#1 $1, #2 $1) }
+	| Exp PLUS Exp	{ Syntax.PLUS ($1,$3, $2) }
+	| Exp MINUS Exp	{ Syntax.MINUS ($1,$3, $2) }
+	| Exp TIMES Exp	{ Syntax.TIMES ($1,$3, $2) }
+	| Exp DIVIDE Exp
+		     	{ Syntax.DIVIDE ($1,$3, $2) }
+	| MINUS Exp %prec UMINUS
+			{ Syntax.UMINUS ($2, $1) }
+	| Exp EQ Exp	{ Syntax.EQ ($1,$3, $2) }
+	| Exp AND Exp	{ Syntax.AND ($1,$3, $2) }
+	| Exp OR Exp	{ Syntax.OR ($1,$3, $2) }
+	| NOT Exp	{ Syntax.NOT ($2, $1) }
+	| IF Exp THEN Exp ELSE Exp
+			{ Syntax.IF ($2,$4,$6, $1) }
+	| LPAR Exp RPAR	{ $2 }
+;

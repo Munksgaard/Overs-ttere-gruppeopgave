@@ -1,0 +1,7 @@
+\ example definitions
+
+x = 17 * 23
+
+y = x * 3.2e~3
+
+z = if x*x = y or y = 0 then x else y

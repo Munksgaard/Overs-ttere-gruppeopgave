@@ -1,0 +1,381 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[latin1]{inputenc}
+
+\title{MIPS modulet og registerallokatoren}
+
+\author{Værktøjer til oversætterdelen af K1}
+
+\date{Dat1E 2001}
+
+\begin{document}
+
+\maketitle
+
+\section*{MIPS modulet}
+
+Den vigtigste del af modulet \verb`MipsData.sml` er datatypen
+\verb`mips`, som beskriver MIPS ordrer, se figur~\ref{mipsdata}. Alle
+de i K1-opgaven nævnte ordrer (og lidt til) er understøttet af denne
+datastruktur. Endvidere er de fleste pseudo-ordrer fra \verb`MASM`
+understøttet.
+
+\begin{figure}
+\renewcommand{\baselinestretch}{0.7}
+\begin{verbatim}
+
+datatype mips
+ = LABEL of string
+ | ASSERT of string
+ | ORG of string
+ | EQU of string*string
+ | EQUR of string*string
+ | END
+ | NOP
+ | DC of string list
+ | DS of string
+ | DSRND of string*string
+ | COMMENT of string
+ | LUI of string*string
+ | ADD of string*string*string
+ | ADDI of string*string*string
+ | SUB of string*string*string
+ | AND of string*string*string
+ | ANDI of string*string*string
+ | OR of string*string*string
+ | ORI of string*string*string
+ | SLT of string*string*string
+ | SLTI of string*string*string
+ | BEQ of string*string*string
+ | BNE of string*string*string
+ | J of string
+ | JAL of string * string list (* label + argumentregistre *)
+ | JR of string
+ | LW of string*string*string (* lw rd,i(rs) kodes som LW (rd,rs,i) *)
+ | SW of string*string*string (* sw rd,i(rs) kodes som SW (rd,rs,i) *)
+ | STOP
+
+fun MOVE (rd,rs) = ORI (rd,rs,"0")
+
+fun LI (rd,v) = ADDI (rd,"0",v)
+
+fun SUBI (rd,rs,v) = ADDI (rd,rs,"-(" ^ v ^ ")")
+
+\end{verbatim}
+\renewcommand{\baselinestretch}{1}
+\caption{MIPS datastrukturen\label{mipsdata}}
+\end{figure}
+
+Alle registre eller konstanter angives i \verb`mips` datatypen som
+tegnfølger (af typen \verb`string`). Dermed er det muligt at bruge
+symbolske navne og regneudtryk. I registerfelter vil en tegnfølge, der
+er rent numerisk blive betragtet som et nummereret register og
+udskrevet med et \verb`$`-prefix.  Ikke-numeriske tegnfølger i
+registerfelter vil blive betragtet som symbolske navne og udskrevet
+med et \verb`:`-prefix. Talfelter udskrives uændret, så man kan bruge
+alle de udtryk, som \verb`MASM` understøtter.
+
+Til at repræsentere en liste af MIPS-intruktioner bruges typen
+\verb`mips list`. En liste kan omformes til en tekst (\verb`string`)
+i `MASM`-kompatibelt format med funktionen \verb`pp_mips_list`.
+
+Der er i \verb`MipsData.sml` defineret tre funktioner, som
+implementerer pseudo-ordrer \verb`MOVE`, \verb`LI` og
+\verb`SUBI`. Disse bliver oversat til hhv.\ \verb`ORI` og
+\verb`ADDI`. Pseudo-ordrer har to formål:
+
+\begin{itemize}
+
+\item[1)] De letter læseligheden af oversættere.
+
+\item[2)] Registerallokatoren kan fjerne \verb`MOVE`-ordrer,
+som flytter mellem to identiske registre. Det kan den ikke hvis
+\verb`MOVE` er implementeret på en anden måde end den definerede
+pseudo-ordrer (f.eks. med \verb`ADDI` eller \verb`OR` med
+register 0).
+
+\end{itemize}
+
+\noindent
+\verb`JAL` intruktionen har, udover destination, i \verb`mips`
+datastrukturen et ekstra argument, som er en liste af registre. Denne
+liste {\em skal} indeholde de registre, som er brugt til at overføre
+parametre til den kaldte funktion (hvis registre bruges til
+dette). Dette er af hensyn til registerallokatoren, som ellers ikke
+kan se, at disse registre er levende frem til kaldet.
+
+Funktionen \verb`pp_mips_list` udskriver en liste af MIPS
+instruktioner i et format, der kan læses af MASM assembleren.
+
+MIPS modulet findes i filen \verb`~dat1e/K1/MipsData.sml`.
+
+\section*{Registerallokatoren}
+
+Registerallokatoren er defineret i \verb`RegAlloc.sig` og
+\verb`RegAlloc.sml`. Det er en simpel registerallokator uden {\em
+spill}. Dette skulle ikke være noget problem med programmer i den
+størrelse som skal oversættes i K1.
+
+Registerallokatoren kaldes med følgende argumenter:
+
+\begin{itemize}
+
+\item En liste af MIPS-ordrer
+
+\item Angivelse af de registre, som registerallokatoren må
+bruge. Dette er givet som et interval af registre, som er opdelt i to
+grupper: Caller-saves registre og callee-saves registre. Dette
+angives med tre tal: \verb`rmin`, \verb`callerMax` og
+\verb`rmax`. Alle registre mellem \verb`rmin` og \verb`callerMax` er
+caller-saves registre. Registre mellem \verb`callerMax`+1 og
+\verb`rmax` er callee-saves.
+
+\end{itemize}
+
+\noindent
+Registerallokatoren returnerer følgende:
+
+\begin{itemize}
+
+\item En liste af register-alias definitioner som knytter numeriske
+registre til symbolske navne. Disse er lavet med \verb`equr`
+direktivet fra \verb`MASM`.
+
+\item En modificeret udgave af den liste af MIPS-ordrer, som
+blev givet som inddata. \verb`MOVE` ordrer vil være kommenteret
+ud i den modificerede liste, hvis de to operander er allokeret til
+samme register.
+
+\item En liste af de variabler, der er levende ved indgangen af
+koden. Denne information er primært nyttig til testudskrifter under
+aflusning af oversætteren.
+
+\item Det højeste allokerede registernummer. Dette kan udnyttes til kun
+at gemme de callee-saves registre, der rent faktisk bliver brugt.
+
+\end{itemize}
+
+\noindent
+Registerallokatoren findes i filerne \verb`RegAlloc.sml` og
+\verb`RegAlloc.sig` i kataloget \verb`~dat1e/K1`.
+
+\subsection*{Kaldkonventioner}
+
+Registerallokatoren understøtter rene callee-saves kaldkonventioner
+eller blandede caller-saves/callee-saves konventioner, men ikke rene
+caller-saves konventioner. Det skyldes at registerallokatoren ikke har
+adgang til aktiverinsgposten og derfor ikke har et sted at gemme
+caller-saves registre ved kald. Det betyder også at gemning/hentning
+af callee-saves registre ikke gøres af registerallokatoren. Kode for
+dette kan tilføjes efter registerallokatoren er kaldt, når man ved,
+hvilke callee-saves registre er brugt.
+
+Herunder er en kort vejledning om hvordan registerallokatorer kan
+bruges ved forskellige kaldkonventioner.
+
+\subsubsection*{Ren stakbaseret callee-saves.}
+
+Denne konvention svarer til figurerne 9.4-9.6 i ``Basics of Compiler
+Design''.  Registerallokatoren kaldes med koden svarende til den del
+af figur 9.5 som starter med $parameter_1 := M[FP+4]$ og slutter med
+$M[FP+4] := result$.
+
+Da \verb`JAL` bruger et register til at gemme returadressen, skal
+gemningen af denne flyttes fra kaldstedet til prologen af den kaldte
+funktion, altså fra figur 9.6 til figur 9.5. Se endvidere herunder.
+
+Da der ikke er nogen caller-saves registre, sættes \verb`callerMax`
+parameteren til registerallokatoren til 0.  \verb`rmin` sættes til 1
+og \verb`rmax` til det højeste register, som ikke bliver brugt til
+specielle formål, såsom $FP$ eller link-register. I eksemplet herunder
+er \verb`rmax` sat til 25.
+
+Hvis \verb`body` er kroppen af funktionen, inklusive hentning af
+parametre fra stakken og gemning af resultatet i stakken (som
+beskrevet herover), så kan man kalde registerallokatoren som
+følger:
+
+\begin{verbatim}
+  let val (allocs, newbody, liveAtEntry, maxUsed)
+             = RegAlloc.registerAlloc body 1 0 25
+\end{verbatim}
+
+\noindent
+Efter kaldet indeholder \verb`allocs` registerdefinitioner (en liste
+af \verb`EQUR` pseudo-ordrer), \verb`newbody` en ny version af
+kroppen (hvor nogle \verb`MOVE` ordrer er kommenteret
+ud). \verb`liveAtEntry` skal ikke bruges i denne sammenhæng, men
+\verb`maxUsed` indeholder nummeret på det højeste brugte register.
+
+Man skal nu foran \verb`newbody` tilføje kode til at gemme registrene
+$1 \ldots \verb`maxr`$ på stakken og efter \verb`newbody` tilføje kode
+til at hente dem fra stakken igen.
+
+For at gøre funktionen komplet skal
+yderligere tilføjes:
+
+\begin{itemize}
+
+\item En label for funktionen.
+
+\item De registerdefinitioner, som er givet i \verb`allocs`.
+
+\item Kode til at gemme register 31 i aktiveringskroppen.
+
+\item (Efter kroppen) kode til at hente register 31 fra
+aktiveringsposten.
+
+\item En \verb`JR` ordre til at hoppe til returadressen.
+
+\end{itemize}
+
+\noindent
+I figur~\ref{calleesaves} er skitseret et stykke SML, der genererer
+kode for en funktion jævnfør ovenstående beskrivelse. Visse detaljer
+er udeladt (markeret med {\em kursiv}). {\tt FP} er en SML variabel,
+der indeholder nummeret (som tegnfølge) på det register, derf bruges
+som frame-pointer.
+
+\begin{figure}
+{\tt
+\begin{tabular}{l}
+let\\
+~~val body = {\it kode for kroppen af funktionen}\\
+~~val loadcode = {\it kode til at hente parametre fra stakken}\\
+~~val resultcode = {\it kode til at lægge resultat på stakken}\\
+~~val body2 = loadcode \verb`@` body \verb`@` resultcode\\
+~~val (allocs,body3,liveAtEntry,maxUsed) =\\
+~~~~~~~~~RegAlloc.registerAlloc body2 1 0 25 \\
+~~val frameSize = 4*({\it antal parametre}+1+maxUsed)\\
+~~val savecode = {\it kode til at gemme reg. 1..maxUsed i aktiveringspost}\\
+~~val restorecode = {\it kode til at hente reg. 1..maxUsed i aktiveringspost}\\
+in\\
+~~~~[MipsData.LABEL {\it f}, MipsData.SW ("31",FP,"0"),\\
+~~~~~MipsData.EQU ({\it f} \verb`^ "_framesize"`, Int.toString frameSize)] \\
+~~\verb`@` allocs \verb`@` savecode \verb`@` body3 \verb`@` restorecode \\
+~~\verb`@` [MipsData.LW ("31",FP,"0"), MipsData.JR "31"]\\
+end
+\end{tabular}
+}
+\caption{Kodegenerering for funktionen {\it f} med ren callee-saves strategi\label{calleesaves}}
+\end{figure}
+
+Når man inde i kroppen af funktionen skal oversætte et funktionskald,
+skal man (jvf.\ fig 9.6 i ``Basics of Compiler Design'') lægge
+$framesize$ til $FP$. Men $framesize$ kendes først efter at
+registerallokatoern er kaldt og (med \verb`maxUsed`) angiver hvor
+mange registre, der skal gemmes. Derfor er det en god ide, inde i
+kroppen at bruge en symbolsk konstant for $framesize$ og efter kaldet
+til registerallokatoren tilføje en definition af den symbolske
+konstant til koden (med en \verb`EQU` pseudo-ordre). Husk at bruge
+forskellige symbolske navne for $framesize$ i forskellige funktioner.
+Figur~\ref{calleesaves} viser hvordan det gøres.
+
+Når man skal oversætte et funktionskald, beregnes parametrene først i
+mellemkodevariabler. Lige før kaldet lægges den aktuelle {\em
+framesize} til $FP$ og paramterene flyttes fra mellemkodevariablerne
+til den nye aktiveringspost (som vist i figur~9.6 i ``Basics of
+Compiler Design''). Derefter laves en {\tt JAL} instruktion til den
+kaldte funktions label. Da der ikke bruges registre til
+parameteroverførsel, er registerlisten til {\tt MipsData.JAL} tom.
+Bagefter {\tt JAL} instruktionen sættes kode til at flytte resultatet
+fra aktiveringsposten og trække {\em framsize} fra $FP$ igen.
+Som nevnt ovenover, er {\em framesize} en symbolsk variable, der
+hedder noget forskelligt fra funktion til funktion. For at bruge den
+rigtige symbolske variabel, skal oversætterfunktionen kende navnet på
+denne. Dette kan gøres med en ekstra nedarvet attribut til
+oversætterfunktionen eller via en global variabel.
+
+Hvis man har separat $FP$ og $SP$, som beskrevet i afsnit 9.8.1 i
+``Basics of Compiler Design'', behøves $framesize$ ikke. Til gengæld
+skal prolog/epilog og kaldsekvens modificeres så både $FP$ og $SP$
+opdateres. Se afsnit 9.8.1 for flere detaljer.
+
+\subsubsection*{Stakbaseret blandet caller-saves og callee-saves.}
+
+Registerallokatoren er lavet sådan at variabler, der er levende
+henover funktionskald, {\em ikke} bliver allokeret i caller-saves
+registre. Dermed er det ikke nødvendigt at gemme levende variabler,
+som ligger i caller-saves registre (der vil nemlig ikke være levende
+variabler i caller-saves registre), så koden for et kald i den
+blandede kaldkonvention ser ud præcis som i den rene callee-saves
+strategi ovenfor.
+
+Man skal sørge for, at der er callee-saves registre nok til at holde
+alle variabler, der er levende over funktionskald. Derfor bør højest
+1/3 af de allokerbare registre være caller-saves.
+
+I forhold til den rene callee-saves strategi beskrevet i
+figur~\ref{calleesaves}, skal der kun laves to ændringer:
+
+\begin{itemize}
+
+\item[1)] I kaldet til registerallokatoren skal \verb`callerMax`
+sættes til det højeste caller-saves register (f.eks.\ 8), så man
+skriver ``8'' i stedet for ``0'' i kaldet.
+
+\item[2)] Kun registre mellem \verb`callerMax`+1 (f.eks.\ 9) og
+\verb`maxUsed` skal gemmes og hentes i aktiveringsposten.
+
+\item[3)] Beregningen af {\em framesize} ændres så man i stedet for
+{\tt maxUsed} bruger {\tt (maxUsed-callerMax)}.
+
+\end{itemize}
+
+\noindent
+Med meget lidt ekstra indsats kan man altså spare et betydeligt antal
+gemninger og hentninger af registre.
+
+\subsubsection*{Brug af registre til parameteroverførsel/retur.}
+
+Denne konvention svarer til figur 9.7-9.10 i ``Basics of Compiler
+design''.
+
+I forhold til den ovenfor beskrevne blandende konvention skal der
+laves følgende ændringer:
+
+I kaldsekvensen:
+
+\begin{itemize}
+
+\item[1)] De første parametre lægges i caller-saves registre
+(\verb`rmin` \ldots \verb`callerMax`) i stedet for på stakken. De
+resterende parametre (hvis der er flere) skal stadig lægges på
+stakken.
+
+\item[2)] I koden for funktionskaldet skal \verb`JAL` ordren
+markeres med de variabler, der bruges til overførsel af parametre til
+kaldet.
+
+\item[3)] Efter kaldet laves et flyt fra det første caller-saves
+register til den symbolske variabel, der skal indeholde resultatet af
+kaldet. Registerallokatoren vil fjerne dette flyt, hvis det ikke er
+nødvendigt, dvs, hvis den symbolske variabel kan allokeres i det
+første caller-saves register.
+
+\end{itemize}
+
+\noindent
+I prolog og epilog:
+
+\begin{itemize}
+
+\item[1)] I stedet for at hente alle parametrene fra stakken, flyttes
+de første af dem fra caller-saves registrene til symbolske
+registre\footnote{Det er {\em ikke} en god ide bare at lade dem blive liggende
+i de nummererede registre, da de så vil blive overskrevet ved
+funktionskald.}. Registerallokatoren vil eliminere de indsatte
+\verb`MOVE`, hvis der alligevel ikke er brug for dem (dvs., hvis det
+symbolske register kan allokeres i samme register, som parameteren
+blev overført i).
+
+\item[2)] Efter beregning af kroppen lægges værdien af denne i det
+første caller-saves register i stedet for på stakken.
+
+\item[3)] Beregningen af {\em framesize} ændres, så parametre, der er
+overført i registre ikke tæller med til {\em framesize}.
+
+\end{itemize}
+
+\end{document}
+
+
