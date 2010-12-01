@@ -25,13 +25,29 @@
        | "fun"          => Parser.FUN pos
        | "read"         => Parser.READ pos
        | "write"        => Parser.WRITE pos
+(* Her begynder vores *)
+       | "type"         => Parser.TYPE pos
+       | "bool"         => Parser.BOOL pos
+       | "true"         => Parser.TRUE pos
+       | "false"        => Parser.FALSE pos
+       | "not"          => Parser.NOT pos
+       | "and"          => Parser.AND pos
+       | "or"           => Parser.OR pos
+       | "if"           => Parser.IF pos
+       | "then"         => Parser.THEN pos
+       | "else"         => Parser.ELSE pos
+       | "let"          => Parser.LET pos
+       | "in"           => Parser.IN pos
+       | "case"         => Parser.CASE pos
+       | "of"           => Parser.OF pos
+(* Her stopper vores *)
        | _              => Parser.ID (s, pos)
 
  }
 
 rule Token = parse
     [` ` `\t` `\r`]+    { Token lexbuf } (* whitespace *)
-    | "//" [^`\n`]*	{ Token lexbuf } (* comment *)
+  | "//" [^`\n`]*	{ Token lexbuf } (* comment *)
   | [`\n` `\012`]       { currentLine := !currentLine+1;
                           lineStartPos :=  getLexemeStart lexbuf
 			                   :: !lineStartPos;
@@ -49,6 +65,13 @@ rule Token = parse
   | "->"                { Parser.ARROW (getPos lexbuf) }
   | "=>"                { Parser.MATCHARROW (getPos lexbuf) }
   | `|`                 { Parser.BAR (getPos lexbuf) }
+(* Her begynder vores *)
+  | `@`                 { Parser.AT ( getPos lexbuf) }
+  | `=`                 { Parser.EQUAL ( getPos lexbuf) }
+  | `<`                 { Parser.LESSTHAN ( getPos lexbuf) }
+  | `,`                 { Parser.COMMA ( getPos lexbuf) }
+  | `;`                 { Parser.SEMICOLON ( getPos lexbuf) }
+(* Her slutter vores *)
   | eof                 { Parser.EOF (getPos lexbuf) }
   | _                   { lexerError lexbuf "Illegal symbol in input" }
 
