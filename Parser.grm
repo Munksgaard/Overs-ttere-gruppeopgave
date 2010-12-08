@@ -10,7 +10,7 @@
 %token <(int*int)> NOT AND OR
 %token <(int*int)> IF THEN ELSE
 %token <(int*int)> LET IN CASE OF
-%token <(int*int)> AT EQUAL LESSTHAN
+%token <(int*int)> NULL EQUAL LESSTHAN
 %token <(int*int)> COMMA SEMICOLON
 
 %right BAR
@@ -42,16 +42,36 @@ Prog :	  FunDecs Exp EOF
 	                { ([],$1,$2) }
 ;
 
+TyDecs :  TYPE ID EQUAL LPAR Types RPAR TyDecs
+                        { (#1 $2, $5, $1) :: $7 }
+        |               { [] }
+
 FunDecs : FUN ID COLON Type ARROW Type Match END FunDecs
 			{ (#1 $2, $4, $6, $7, $1) :: $9 }
 	|		{ [] }
 ;
 
 Type :	  INT		{ Cat.Int $1 }
+        | BOOL          { Cat.Bool $1 }
+        | ID            { Cat.TyVar $1 }
 ;
+
+Types:    Type          { [$1] }
+        | Type COMMA Types
+                        { $1 :: $3 }
 
 Pat :	  NUM		{ Cat.NumP $1 }
 	| ID 		{ Cat.VarP $1 }
+        | TRUE          { Cat.TrueP $1 }
+        | FALSE         { Cat.FalseP $1 }
+        | NULL          { Cat.NullP $1 }
+        | LPAR Pats RPAR
+                        { $2 }
+;
+
+Pats :    Pat           { [$1] }
+          Pat COMMA Pats
+                        { $1 :: $3 }
 ;
 
 Match :	  Pat MATCHARROW Exp
@@ -61,12 +81,39 @@ Match :	  Pat MATCHARROW Exp
 ;
 
 Exp :	  NUM		{ Cat.Num $1 }
+        | TRUE          { Cat.True $1 }
+        | FALSE         { Cat.False $1 }
+        | NULL COLON ID { Cat.Null (#1 $3, $1) }
 	| ID		{ Cat.Var $1 }
+        | LPAR Exps RPAR COLON ID 
+                        { Cat.MkTuple ($2, #1 $5, $1) }
 	| Exp PLUS Exp	{ Cat.Plus ($1, $3, $2) }
 	| Exp MINUS Exp	{ Cat.Minus ($1, $3, $2) }
+        | Exp EQUAL Exp { Cat.Equal ($1, $3, $2) }
+        | Exp LESSTHAN Exp
+                        { Cat.Less ($1, $3, $2) }
+        | NOT Exp       { Cat.Not ($2, $1) }
+        | Exp AND Exp   { Cat.And ($1, $3, $2) }
+        | Exp OR Exp    { Cat.Or ($1, $3, $2) }
+        | IF Exp THEN Exp ELSE Exp
+                        { Cat.If ($2, $4, $6, $1) }
+        | LET Dec IN Exp
+                        { Cat.Let ($2, $4, $1) }
+        | CASE Exp OF Match END
+                        { Cat.Case ($2, $4, $1) }
 	| ID Exp %prec WRITE
 			{ Cat.Apply (#1 $1, $2, #2 $1) }
 	| READ		{ Cat.Read $1 }
 	| WRITE Exp	{ Cat.Write ($2, $1) }
 	| LPAR Exp RPAR	{ $2 }
+;
+
+Exps :    Exp           { [$1] }
+          Exp COMMA Exps
+                        { $1 :: $3 }
+;
+
+Dec :	  Pat EQUAL Exp { [($1,$3)] }
+	| Dec SEMICOLON Dec
+			{ $1 @ $3 }
 ;

@@ -63,7 +63,7 @@ rule Token = parse
   | "->"                { Parser.ARROW (getPos lexbuf) }
   | "=>"                { Parser.MATCHARROW (getPos lexbuf) }
   | `|`                 { Parser.BAR (getPos lexbuf) }
-  | `@`                 { Parser.AT ( getPos lexbuf) }
+  | `@`                 { Parser.NULL ( getPos lexbuf) }
   | `=`                 { Parser.EQUAL ( getPos lexbuf) }
   | `<`                 { Parser.LESSTHAN ( getPos lexbuf) }
   | `,`                 { Parser.COMMA ( getPos lexbuf) }
