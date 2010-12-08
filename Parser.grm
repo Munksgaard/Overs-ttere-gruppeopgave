@@ -13,15 +13,18 @@
 %token <(int*int)> NULL EQUAL LESSTHAN
 %token <(int*int)> COMMA SEMICOLON
 
+%nonassoc ID
+%nonassoc TRUE FALSE NULL LPAR RPAR NUM
 %right BAR
 %right MATCHARROW
-%nonassoc ELSE IN
+%right SEMICOLON COMMA
+%nonassoc IF THEN ELSE IN LET CASE OF READ
 %left PLUS MINUS
-%right OR /* vores tilføjelse */
-%right AND /* vores tilføjelse */
-%nonassoc NOT /* vores tilføjelse */
-%nonassoc LESSTHAN EQUAL /* vores tilføjelse */
-%right WRITE 
+%right OR
+%right AND
+%nonassoc NOT
+%nonassoc LESSTHAN EQUAL
+%right WRITE
 
 %start Prog
 %type <Cat.Prog> Prog
@@ -37,9 +40,8 @@
 %type <Cat.Dec> Dec
 
 %%
-
-Prog :	  FunDecs Exp EOF
-	                { ([],$1,$2) }
+Prog :	  TyDecs FunDecs Exp EOF
+	                { ($1,$2,$3) }
 ;
 
 TyDecs :  TYPE ID EQUAL LPAR Types RPAR TyDecs
@@ -66,11 +68,11 @@ Pat :	  NUM		{ Cat.NumP $1 }
         | FALSE         { Cat.FalseP $1 }
         | NULL          { Cat.NullP $1 }
         | LPAR Pats RPAR
-                        { $2 }
+                        { Cat.TupleP ($2, $1) }
 ;
 
 Pats :    Pat           { [$1] }
-          Pat COMMA Pats
+        | Pat COMMA Pats
                         { $1 :: $3 }
 ;
 
@@ -84,7 +86,7 @@ Exp :	  NUM		{ Cat.Num $1 }
         | TRUE          { Cat.True $1 }
         | FALSE         { Cat.False $1 }
         | NULL COLON ID { Cat.Null (#1 $3, $1) }
-	| ID		{ Cat.Var $1 }
+	| ID            { Cat.Var $1 }
         | LPAR Exps RPAR COLON ID 
                         { Cat.MkTuple ($2, #1 $5, $1) }
 	| Exp PLUS Exp	{ Cat.Plus ($1, $3, $2) }
@@ -109,11 +111,11 @@ Exp :	  NUM		{ Cat.Num $1 }
 ;
 
 Exps :    Exp           { [$1] }
-          Exp COMMA Exps
+        | Exp COMMA Exps
                         { $1 :: $3 }
 ;
 
-Dec :	  Pat EQUAL Exp { [($1,$3)] }
+Dec :	  Pat EQUAL Exp { [($1,$3,$2)] }
 	| Dec SEMICOLON Dec
 			{ $1 @ $3 }
 ;
