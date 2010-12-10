@@ -14,7 +14,9 @@
 %token <(int*int)> COMMA SEMICOLON
 
 %nonassoc ID
-%nonassoc TRUE FALSE NULL LPAR RPAR NUM
+%nonassoc TRUE FALSE NULL NUM
+%right LPAR
+%left RPAR
 %right BAR
 %right MATCHARROW
 %right SEMICOLON COMMA

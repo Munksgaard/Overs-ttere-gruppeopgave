@@ -25,18 +25,56 @@ struct
   fun checkType te ttable =
     case te of
       Cat.Int _ => Int
+    | Cat.Bool _ => Bool
+    | Cat.TyVar (x, pos) => 
+       (case lookup x ttable of
+	  SOME t => t
+        | _ => raise Error ("Unknown type "^x,pos))
 
   (* Check pattern and return vtable *)
   fun checkPat pat ty ttable pos =
+      (* pat er bodytypen, ty er argumenttypen *)
     case (pat,ty) of
       (Cat.NumP _, Int) => []
+    | (Cat.TrueP _, Bool) => []
+    | (Cat.FalseP _, Bool) => []
+    | (Cat.NullP _, x) =>
+       (case lookup x ttable of
+          SOME _ => []
+        | _ => raise Error ("Pattern doesn't match type", pos))
+    | (Cat.TupleP _,  x) => 
+       (case lookup x ttable of
+          SOME _ => []
+        | _ => raise Error ("Pattern doesn't match type", pos))
     | (Cat.VarP (x,p), ty) => [(x,ty)]
     | _ => raise Error ("Pattern doesn't match type", pos)
+
+  fun checkDec decs vtable ftable ttable =
+    case decs of
+      (p, e, pos) :: [] =>
+        checkDec p e pos vtable ftable ttable
+    | (p, e, pos) :: dec =>
+        (checkDec p e pos vtable ftable ttable) :: 
+        (checkDecList p e pos vtable ftable ttable)
+    | _ => raise Error ("wtf? this shouldnt happen in decs")
+
+  fun checkDec p e pos vtable ftable ttable =
+    let
+      val p = checkPat
+    in
+      []
+    end
 
   (* check expression and return type *)
   fun checkExp exp vtable ftable ttable =
     case exp of
       Cat.Num (n,pos) => Int
+    | Cat.True (pos) => Bool
+    | Cat.False (pos) => Bool
+    | Cat.Null (s, pos) =>
+       (case lookup s ttable of
+          t => t
+        | _ => raise Error ("Unknown type argument to null", pos))
     | Cat.Var (x,pos) =>
        (case lookup x vtable of
 	  SOME t => t
@@ -51,6 +89,33 @@ struct
               checkExp e2 vtable ftable ttable) of
           (Int,Int) => Int
         | _ => raise Error ("Non-int argument to -",pos))
+    | Cat.Equal (e1, e2, pos) =>
+       (* Vi har ikke implementeret equal for bools *)
+       (case (checkExp e1 vtable ftable ttable,
+              checkExp e2 vtable ftable ttable) of
+          (Int,Int) => Bool
+        | _ => raise error ("Non-int argument to =", pos))
+    | Cat.Less (e1, e2, pos) =>
+       (case (checkExp e1 vtable ftable ttable,
+              checkExp e2 vtable ftable ttable) of
+          (Int,Int) => Bool
+        | _ => raise error ("Non-int argument to <", pos))
+    | Cat.Not (e, pos) =>
+       (case (checkExp e vtable ftable ttable) of
+          Bool => Bool
+        | _ => raise error ("Non-bool argument to not", pos))
+    | Cat.And (e1, e2, pos) =>
+       (case (checkExp e1 vtable ftable ttable,
+              checkExp e2 vtable ftable ttable) of
+          (Bool,Bool) => Bool
+        | _ => raise error ("Non-int argument to and", pos))
+    | Cat.Or (e1, e2, pos) =>
+       (case (checkExp e1 vtable ftable ttable,
+              checkExp e2 vtable ftable ttable) of
+          (Bool,Bool) => Bool
+        | _ => raise error ("Non-int argument to or", pos))
+    | Cat.Let (d, e, pos) => []
+       (* WHATS UP NOOB *)
     | Cat.Apply (f,e1,pos) =>
        (case lookup f ftable of
 	  SOME (t1,t2) =>
@@ -65,6 +130,7 @@ struct
         | _ => raise Error ("Non-int argument to write",pos))
 
   and checkMatch [(p,e)] tce vtable ftable ttable pos =
+      (* tce er argumenttypen, p er body-typen  *)
         let
           val vtable1 = checkPat p tce ttable pos
         in

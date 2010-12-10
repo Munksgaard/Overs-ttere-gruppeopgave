@@ -57,7 +57,7 @@ and action_15 lexbuf = (
 and action_14 lexbuf = (
  Parser.EQUAL ( getPos lexbuf) )
 and action_13 lexbuf = (
- Parser.AT ( getPos lexbuf) )
+ Parser.NULL ( getPos lexbuf) )
 and action_12 lexbuf = (
  Parser.BAR (getPos lexbuf) )
 and action_11 lexbuf = (
