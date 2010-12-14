@@ -62,14 +62,16 @@ struct
         end
     | Cat.FalseP (pos) =>
         ([Mips.BNE (v, "0", fail)], vtable)
-    (*| Cat.NullP (pos) => TODO *)
+    | Cat.NullP (pos) => 
+        ([Mips.BNE (v, "0", fail)], vtable)
     | Cat.VarP (x,pos) =>
         let
           val xt = "_patVar_"^x^"_"^newName()
         in
           ([Mips.MOVE (xt,v)], (x,xt)::vtable)
         end
-(*    | Cat.TupleP  TODO *)
+    | Cat.TupleP (pats, pos) =>
+        ([Mips.BEQ (v, "0", fail)], vtable)
     | _ => raise Error ("TERRIBLE FAILURE", (0,0))
 
   (* compile expression *)
@@ -160,18 +162,33 @@ struct
           code1 @ code2 @
           [Mips.OR (place, t1, t2)]
         end
-(* TODO let *)
+   (* VI SKAL LAVE EN COMPILEDEC-FUNKTION!!!!
+ | Cat.Let (d, e, (line, col)) =>
+        let
+          val t1 = "_let1_"^newName()
+          val t2 = "_let2_"^newName()
+          val fail = "_letfaillabel_"^newName()
+          val endlabel = "_letendlabel_"^newName()
+          val code1 = compileExp e vtable t1
+          val code2 = compileMatch d t1 place endlabel fail vtable
+          val errorcode     (* if match fails *)
+	    = [Mips.LABEL fail,
+	       Mips.LI ("5",makeConst line),
+	       Mips.J "_Error_"]
+        in
+          code1 @ code2 @
+          errorcode @
+          [Mips.LABEL endlabel]
+        end *)
     | Cat.If (eif, ethen, eelse, pos) =>
         let
           val t1 = "_if_"^newName()
-          val t2 = "_then_"^newName()
-          val t3 = "_else_"^newName()
           val l1 = "_elselabel_"^newName()
           val l2 = "_exitlabel_"^newName()
           val code1 = compileExp eif vtable t1
-          val code2 = compileExp ethen vtable t2
-          val code3 = compileExp eelse vtable t3
-	in (* FEJL FEJL TODO *)
+          val code2 = compileExp ethen vtable place
+          val code3 = compileExp eelse vtable place
+	in
           code1 @
 	  [Mips.BEQ (t1, "0", l1)]
           @ code2 @
@@ -181,7 +198,29 @@ struct
           [Mips.LABEL l2]
         end
 (* TODO MkTuple *)
-(* TODO Case *)
+    | Cat.MkTuple (es, s, pos) =>
+        let
+          val code1 = compileTuple es vtable place
+        in
+          code1
+        end
+    | Cat.Case (e, m, (line, col)) =>
+        let
+          val t1 = "_case1_"^newName()
+          val t2 = "_case2_"^newName()
+          val fail = "_casefaillabel_"^newName()
+          val endlabel = "_caseendlabel_"^newName()
+          val code1 = compileExp e vtable t1
+          val code2 = compileMatch m t1 place endlabel fail vtable
+          val errorcode     (* if match fails *)
+	    = [Mips.LABEL fail,
+	       Mips.LI ("5",makeConst line),
+	       Mips.J "_Error_"]
+        in
+          code1 @ code2 @
+          errorcode @
+          [Mips.LABEL endlabel] 
+        end
     | Cat.Apply (f,e,pos) =>
 	let
 	  val t1 = "_apply_"^newName()
@@ -215,6 +254,18 @@ struct
 	in
 	  code1 @ code2 @ [Mips.J endLabel, Mips.LABEL next] @ code3
 	end
+
+  and compileTuple [] _ _= [] 
+    | compileTuple (e :: es) vtable place =
+        let
+          val t1 = "_tuple1_"^newName()
+          val t2 = "_tuple2_"^newName()
+          val code1 = compileExp e vtable t1
+          val code2 = compileTuple es vtable t2
+        in 
+          code1 @ 
+          [Mips,
+        end
 
   (* code for saving and restoring callee-saves registers *)
   fun stackSave currentReg maxReg savecode restorecode offset =
@@ -272,6 +323,7 @@ struct
   (* compile program *)
   fun compile (tys, funs, e) =
     let
+      val tysCode = []
       val funsCode = List.concat (List.map compileFun funs)
       val mainCode = compileExp e [] "dead" @ [Mips.J "_stop_"]
       val (code1, _, _)

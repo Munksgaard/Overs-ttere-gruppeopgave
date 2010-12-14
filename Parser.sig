@@ -12,8 +12,8 @@ type t__10__ = (int*int)
 type t__11__ = (int*int)
 type t__12__ = (int*int)
 type t__13__ = (int*int)
-type t__14__ = (int*int)
-type t__15__ = string*(int*int)
+type t__14__ = string*(int*int)
+type t__15__ = (int*int)
 type t__16__ = (int*int)
 type t__17__ = (int*int)
 type t__18__ = (int*int)
@@ -38,28 +38,28 @@ in
 datatype token =
     AND of t__1__
   | ARROW of t__2__
-  | AT of t__3__
-  | BAR of t__4__
-  | BOOL of t__5__
-  | CASE of t__6__
-  | COLON of t__7__
-  | COMMA of t__8__
-  | ELSE of t__9__
-  | END of t__10__
-  | EOF of t__11__
-  | EQUAL of t__12__
-  | FALSE of t__13__
-  | FUN of t__14__
-  | ID of t__15__
-  | IF of t__16__
-  | IN of t__17__
-  | INT of t__18__
-  | LESSTHAN of t__19__
-  | LET of t__20__
-  | LPAR of t__21__
-  | MATCHARROW of t__22__
-  | MINUS of t__23__
-  | NOT of t__24__
+  | BAR of t__3__
+  | BOOL of t__4__
+  | CASE of t__5__
+  | COLON of t__6__
+  | COMMA of t__7__
+  | ELSE of t__8__
+  | END of t__9__
+  | EOF of t__10__
+  | EQUAL of t__11__
+  | FALSE of t__12__
+  | FUN of t__13__
+  | ID of t__14__
+  | IF of t__15__
+  | IN of t__16__
+  | INT of t__17__
+  | LESSTHAN of t__18__
+  | LET of t__19__
+  | LPAR of t__20__
+  | MATCHARROW of t__21__
+  | MINUS of t__22__
+  | NOT of t__23__
+  | NULL of t__24__
   | NUM of t__25__
   | OF of t__26__
   | OR of t__27__

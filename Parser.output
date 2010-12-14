@@ -1,28 +1,62 @@
    0  $accept : %entry% $end
 
-   1  Prog : FunDecs Exp EOF
+   1  Prog : TyDecs FunDecs Exp EOF
 
-   2  FunDecs : FUN ID COLON Type ARROW Type Match END FunDecs
-   3          |
+   2  TyDecs : TYPE ID EQUAL LPAR Types RPAR TyDecs
+   3         |
 
-   4  Type : INT
+   4  FunDecs : FUN ID COLON Type ARROW Type Match END FunDecs
+   5          |
 
-   5  Pat : NUM
-   6      | ID
+   6  Type : INT
+   7       | BOOL
+   8       | ID
 
-   7  Match : Pat MATCHARROW Exp
-   8        | Match BAR Match
+   9  Types : Type
+  10        | Type COMMA Types
 
-   9  Exp : NUM
-  10      | ID
-  11      | Exp PLUS Exp
-  12      | Exp MINUS Exp
-  13      | ID Exp
-  14      | READ
-  15      | WRITE Exp
-  16      | LPAR Exp RPAR
+  11  Pat : NUM
+  12      | ID
+  13      | TRUE
+  14      | FALSE
+  15      | NULL
+  16      | LPAR Pats RPAR
 
-  17  %entry% : '\001' Prog
+  17  Pats : Pat
+  18       | Pat COMMA Pats
+
+  19  Match : Pat MATCHARROW Exp
+  20        | Match BAR Match
+
+  21  Exp : NUM
+  22      | TRUE
+  23      | FALSE
+  24      | NULL COLON ID
+  25      | ID
+  26      | LPAR Exp COMMA Exps RPAR COLON ID
+  27      | LPAR Exp RPAR COLON ID
+  28      | Exp PLUS Exp
+  29      | Exp MINUS Exp
+  30      | Exp EQUAL Exp
+  31      | Exp LESSTHAN Exp
+  32      | NOT Exp
+  33      | Exp AND Exp
+  34      | Exp OR Exp
+  35      | IF Exp THEN Exp ELSE Exp
+  36      | LET Dec IN Exp
+  37      | CASE Exp OF Match END
+  38      | ID Exp
+  39      | READ
+  40      | WRITE Exp
+  41      | LPAR Exp RPAR
+
+  42  Exps : Exp
+  43       | Exp COMMA Exps
+
+  44  Dec : Pat EQUAL Exp
+  45      | Dec SEMICOLON Dec
+
+  46  %entry% : '\001' Prog
 
 state 0
 	$accept : . %entry% $end  (0)
@@ -34,18 +68,26 @@ state 0
 
 
 state 1
-	%entry% : '\001' . Prog  (17)
-	FunDecs : .  (3)
+	%entry% : '\001' . Prog  (46)
+	TyDecs : .  (3)
 
-	FUN  shift 3
+	TYPE  shift 3
+	CASE  reduce 3
+	FALSE  reduce 3
+	FUN  reduce 3
 	ID  reduce 3
+	IF  reduce 3
+	LET  reduce 3
 	LPAR  reduce 3
+	NOT  reduce 3
+	NULL  reduce 3
 	NUM  reduce 3
 	READ  reduce 3
+	TRUE  reduce 3
 	WRITE  reduce 3
 
 	Prog  goto 4
-	FunDecs  goto 5
+	TyDecs  goto 5
 
 
 state 2
@@ -55,339 +97,1426 @@ state 2
 
 
 state 3
-	FunDecs : FUN . ID COLON Type ARROW Type Match END FunDecs  (2)
+	TyDecs : TYPE . ID EQUAL LPAR Types RPAR TyDecs  (2)
 
 	ID  shift 6
 	.  error
 
 
 state 4
-	%entry% : '\001' Prog .  (17)
+	%entry% : '\001' Prog .  (46)
 
-	.  reduce 17
+	.  reduce 46
 
 
 state 5
-	Prog : FunDecs . Exp EOF  (1)
+	Prog : TyDecs . FunDecs Exp EOF  (1)
+	FunDecs : .  (5)
 
-	ID  shift 7
-	LPAR  shift 8
-	NUM  shift 9
-	READ  shift 10
-	WRITE  shift 11
-	.  error
+	FUN  shift 7
+	CASE  reduce 5
+	FALSE  reduce 5
+	ID  reduce 5
+	IF  reduce 5
+	LET  reduce 5
+	LPAR  reduce 5
+	NOT  reduce 5
+	NULL  reduce 5
+	NUM  reduce 5
+	READ  reduce 5
+	TRUE  reduce 5
+	WRITE  reduce 5
 
-	Exp  goto 12
+	FunDecs  goto 8
 
 
 state 6
-	FunDecs : FUN ID . COLON Type ARROW Type Match END FunDecs  (2)
+	TyDecs : TYPE ID . EQUAL LPAR Types RPAR TyDecs  (2)
 
-	COLON  shift 13
+	EQUAL  shift 9
 	.  error
 
 
 state 7
-	Exp : ID .  (10)
-	Exp : ID . Exp  (13)
+	FunDecs : FUN . ID COLON Type ARROW Type Match END FunDecs  (4)
 
-	ID  shift 7
-	LPAR  shift 8
-	NUM  shift 9
-	READ  shift 10
-	WRITE  shift 11
-	BAR  reduce 10
-	END  reduce 10
-	EOF  reduce 10
-	MINUS  reduce 10
-	PLUS  reduce 10
-	RPAR  reduce 10
-
-	Exp  goto 14
+	ID  shift 10
+	.  error
 
 
 state 8
-	Exp : LPAR . Exp RPAR  (16)
+	Prog : TyDecs FunDecs . Exp EOF  (1)
 
-	ID  shift 7
-	LPAR  shift 8
-	NUM  shift 9
-	READ  shift 10
-	WRITE  shift 11
-	.  error
-
-	Exp  goto 15
-
-
-state 9
-	Exp : NUM .  (9)
-
-	.  reduce 9
-
-
-state 10
-	Exp : READ .  (14)
-
-	.  reduce 14
-
-
-state 11
-	Exp : WRITE . Exp  (15)
-
-	ID  shift 7
-	LPAR  shift 8
-	NUM  shift 9
-	READ  shift 10
-	WRITE  shift 11
-	.  error
-
-	Exp  goto 16
-
-
-state 12
-	Prog : FunDecs Exp . EOF  (1)
-	Exp : Exp . PLUS Exp  (11)
-	Exp : Exp . MINUS Exp  (12)
-
-	EOF  shift 17
-	MINUS  shift 18
-	PLUS  shift 19
-	.  error
-
-
-state 13
-	FunDecs : FUN ID COLON . Type ARROW Type Match END FunDecs  (2)
-
-	INT  shift 20
-	.  error
-
-	Type  goto 21
-
-
-state 14
-	Exp : Exp . PLUS Exp  (11)
-	Exp : Exp . MINUS Exp  (12)
-	Exp : ID Exp .  (13)
-
-	BAR  reduce 13
-	END  reduce 13
-	EOF  reduce 13
-	MINUS  reduce 13
-	PLUS  reduce 13
-	RPAR  reduce 13
-
-
-state 15
-	Exp : Exp . PLUS Exp  (11)
-	Exp : Exp . MINUS Exp  (12)
-	Exp : LPAR Exp . RPAR  (16)
-
-	MINUS  shift 18
-	PLUS  shift 19
-	RPAR  shift 22
-	.  error
-
-
-state 16
-	Exp : Exp . PLUS Exp  (11)
-	Exp : Exp . MINUS Exp  (12)
-	Exp : WRITE Exp .  (15)
-
-	BAR  reduce 15
-	END  reduce 15
-	EOF  reduce 15
-	MINUS  reduce 15
-	PLUS  reduce 15
-	RPAR  reduce 15
-
-
-state 17
-	Prog : FunDecs Exp EOF .  (1)
-
-	.  reduce 1
-
-
-state 18
-	Exp : Exp MINUS . Exp  (12)
-
-	ID  shift 7
-	LPAR  shift 8
-	NUM  shift 9
-	READ  shift 10
-	WRITE  shift 11
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
 	.  error
 
 	Exp  goto 23
 
 
-state 19
-	Exp : Exp PLUS . Exp  (11)
+state 9
+	TyDecs : TYPE ID EQUAL . LPAR Types RPAR TyDecs  (2)
 
-	ID  shift 7
-	LPAR  shift 8
-	NUM  shift 9
-	READ  shift 10
-	WRITE  shift 11
+	LPAR  shift 24
 	.  error
 
-	Exp  goto 24
+
+state 10
+	FunDecs : FUN ID . COLON Type ARROW Type Match END FunDecs  (4)
+
+	COLON  shift 25
+	.  error
+
+
+state 11
+	Exp : CASE . Exp OF Match END  (37)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 26
+
+
+state 12
+	Exp : FALSE .  (23)
+
+	.  reduce 23
+
+
+state 13
+	Exp : ID .  (25)
+	Exp : ID . Exp  (38)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	AND  reduce 25
+	BAR  reduce 25
+	COMMA  reduce 25
+	ELSE  reduce 25
+	END  reduce 25
+	EOF  reduce 25
+	EQUAL  reduce 25
+	IN  reduce 25
+	LESSTHAN  reduce 25
+	MINUS  reduce 25
+	OF  reduce 25
+	OR  reduce 25
+	PLUS  reduce 25
+	RPAR  reduce 25
+	SEMICOLON  reduce 25
+	THEN  reduce 25
+
+	Exp  goto 27
+
+
+state 14
+	Exp : IF . Exp THEN Exp ELSE Exp  (35)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 28
+
+
+state 15
+	Exp : LET . Dec IN Exp  (36)
+
+	FALSE  shift 29
+	ID  shift 30
+	LPAR  shift 31
+	NULL  shift 32
+	NUM  shift 33
+	TRUE  shift 34
+	.  error
+
+	Pat  goto 35
+	Dec  goto 36
+
+
+state 16
+	Exp : LPAR . Exp COMMA Exps RPAR COLON ID  (26)
+	Exp : LPAR . Exp RPAR COLON ID  (27)
+	Exp : LPAR . Exp RPAR  (41)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 37
+
+
+state 17
+	Exp : NOT . Exp  (32)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 38
+
+
+state 18
+	Exp : NULL . COLON ID  (24)
+
+	COLON  shift 39
+	.  error
+
+
+state 19
+	Exp : NUM .  (21)
+
+	.  reduce 21
 
 
 state 20
-	Type : INT .  (4)
+	Exp : READ .  (39)
 
-	.  reduce 4
+	.  reduce 39
 
 
 state 21
-	FunDecs : FUN ID COLON Type . ARROW Type Match END FunDecs  (2)
+	Exp : TRUE .  (22)
 
-	ARROW  shift 25
-	.  error
+	.  reduce 22
 
 
 state 22
-	Exp : LPAR Exp RPAR .  (16)
+	Exp : WRITE . Exp  (40)
 
-	.  reduce 16
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 40
 
 
 state 23
-	Exp : Exp . PLUS Exp  (11)
-	Exp : Exp . MINUS Exp  (12)
-	Exp : Exp MINUS Exp .  (12)
+	Prog : TyDecs FunDecs Exp . EOF  (1)
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
 
-	BAR  reduce 12
-	END  reduce 12
-	EOF  reduce 12
-	MINUS  reduce 12
-	PLUS  reduce 12
-	RPAR  reduce 12
+	AND  shift 41
+	EOF  shift 42
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	MINUS  shift 45
+	OR  shift 46
+	PLUS  shift 47
+	.  error
 
 
 state 24
-	Exp : Exp . PLUS Exp  (11)
-	Exp : Exp PLUS Exp .  (11)
-	Exp : Exp . MINUS Exp  (12)
+	TyDecs : TYPE ID EQUAL LPAR . Types RPAR TyDecs  (2)
 
-	BAR  reduce 11
-	END  reduce 11
-	EOF  reduce 11
-	MINUS  reduce 11
-	PLUS  reduce 11
-	RPAR  reduce 11
+	BOOL  shift 48
+	ID  shift 49
+	INT  shift 50
+	.  error
+
+	Type  goto 51
+	Types  goto 52
 
 
 state 25
-	FunDecs : FUN ID COLON Type ARROW . Type Match END FunDecs  (2)
+	FunDecs : FUN ID COLON . Type ARROW Type Match END FunDecs  (4)
 
-	INT  shift 20
+	BOOL  shift 48
+	ID  shift 49
+	INT  shift 50
 	.  error
 
-	Type  goto 26
+	Type  goto 53
 
 
 state 26
-	FunDecs : FUN ID COLON Type ARROW Type . Match END FunDecs  (2)
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+	Exp : CASE Exp . OF Match END  (37)
 
-	ID  shift 27
-	NUM  shift 28
+	AND  shift 41
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	MINUS  shift 45
+	OF  shift 54
+	OR  shift 46
+	PLUS  shift 47
 	.  error
-
-	Match  goto 29
-	Pat  goto 30
 
 
 state 27
-	Pat : ID .  (6)
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+	Exp : ID Exp .  (38)
+
+	AND  reduce 38
+	BAR  reduce 38
+	COMMA  reduce 38
+	ELSE  reduce 38
+	END  reduce 38
+	EOF  reduce 38
+	EQUAL  reduce 38
+	IN  reduce 38
+	LESSTHAN  reduce 38
+	MINUS  reduce 38
+	OF  reduce 38
+	OR  reduce 38
+	PLUS  reduce 38
+	RPAR  reduce 38
+	SEMICOLON  reduce 38
+	THEN  reduce 38
+
+
+state 28
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+	Exp : IF Exp . THEN Exp ELSE Exp  (35)
+
+	AND  shift 41
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	MINUS  shift 45
+	OR  shift 46
+	PLUS  shift 47
+	THEN  shift 55
+	.  error
+
+
+state 29
+	Pat : FALSE .  (14)
+
+	.  reduce 14
+
+
+state 30
+	Pat : ID .  (12)
+
+	.  reduce 12
+
+
+state 31
+	Pat : LPAR . Pats RPAR  (16)
+
+	FALSE  shift 29
+	ID  shift 30
+	LPAR  shift 31
+	NULL  shift 32
+	NUM  shift 33
+	TRUE  shift 34
+	.  error
+
+	Pat  goto 56
+	Pats  goto 57
+
+
+state 32
+	Pat : NULL .  (15)
+
+	.  reduce 15
+
+
+state 33
+	Pat : NUM .  (11)
+
+	.  reduce 11
+
+
+state 34
+	Pat : TRUE .  (13)
+
+	.  reduce 13
+
+
+state 35
+	Dec : Pat . EQUAL Exp  (44)
+
+	EQUAL  shift 58
+	.  error
+
+
+state 36
+	Exp : LET Dec . IN Exp  (36)
+	Dec : Dec . SEMICOLON Dec  (45)
+
+	IN  shift 59
+	SEMICOLON  shift 60
+	.  error
+
+
+state 37
+	Exp : LPAR Exp . COMMA Exps RPAR COLON ID  (26)
+	Exp : LPAR Exp . RPAR COLON ID  (27)
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+	Exp : LPAR Exp . RPAR  (41)
+
+	AND  shift 41
+	COMMA  shift 61
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	MINUS  shift 45
+	OR  shift 46
+	PLUS  shift 47
+	RPAR  shift 62
+	.  error
+
+
+state 38
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : NOT Exp .  (32)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	AND  reduce 32
+	BAR  reduce 32
+	COMMA  reduce 32
+	ELSE  reduce 32
+	END  reduce 32
+	EOF  reduce 32
+	IN  reduce 32
+	MINUS  reduce 32
+	OF  reduce 32
+	OR  reduce 32
+	PLUS  reduce 32
+	RPAR  reduce 32
+	SEMICOLON  reduce 32
+	THEN  reduce 32
+
+
+state 39
+	Exp : NULL COLON . ID  (24)
+
+	ID  shift 63
+	.  error
+
+
+state 40
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+	Exp : WRITE Exp .  (40)
+
+	AND  reduce 40
+	BAR  reduce 40
+	COMMA  reduce 40
+	ELSE  reduce 40
+	END  reduce 40
+	EOF  reduce 40
+	EQUAL  reduce 40
+	IN  reduce 40
+	LESSTHAN  reduce 40
+	MINUS  reduce 40
+	OF  reduce 40
+	OR  reduce 40
+	PLUS  reduce 40
+	RPAR  reduce 40
+	SEMICOLON  reduce 40
+	THEN  reduce 40
+
+
+state 41
+	Exp : Exp AND . Exp  (33)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 64
+
+
+state 42
+	Prog : TyDecs FunDecs Exp EOF .  (1)
+
+	.  reduce 1
+
+
+state 43
+	Exp : Exp EQUAL . Exp  (30)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 65
+
+
+state 44
+	Exp : Exp LESSTHAN . Exp  (31)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 66
+
+
+state 45
+	Exp : Exp MINUS . Exp  (29)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 67
+
+
+state 46
+	Exp : Exp OR . Exp  (34)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 68
+
+
+state 47
+	Exp : Exp PLUS . Exp  (28)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 69
+
+
+state 48
+	Type : BOOL .  (7)
+
+	.  reduce 7
+
+
+state 49
+	Type : ID .  (8)
+
+	.  reduce 8
+
+
+state 50
+	Type : INT .  (6)
 
 	.  reduce 6
 
 
-state 28
-	Pat : NUM .  (5)
+state 51
+	Types : Type .  (9)
+	Types : Type . COMMA Types  (10)
 
-	.  reduce 5
+	COMMA  shift 70
+	RPAR  reduce 9
 
 
-state 29
-	FunDecs : FUN ID COLON Type ARROW Type Match . END FunDecs  (2)
-	Match : Match . BAR Match  (8)
+state 52
+	TyDecs : TYPE ID EQUAL LPAR Types . RPAR TyDecs  (2)
 
-	BAR  shift 31
-	END  shift 32
+	RPAR  shift 71
 	.  error
 
 
-state 30
-	Match : Pat . MATCHARROW Exp  (7)
+state 53
+	FunDecs : FUN ID COLON Type . ARROW Type Match END FunDecs  (4)
 
-	MATCHARROW  shift 33
+	ARROW  shift 72
 	.  error
 
 
-state 31
-	Match : Match BAR . Match  (8)
+state 54
+	Exp : CASE Exp OF . Match END  (37)
 
-	ID  shift 27
-	NUM  shift 28
+	FALSE  shift 29
+	ID  shift 30
+	LPAR  shift 31
+	NULL  shift 32
+	NUM  shift 33
+	TRUE  shift 34
 	.  error
 
-	Match  goto 34
-	Pat  goto 30
+	Match  goto 73
+	Pat  goto 74
 
 
-state 32
-	FunDecs : FUN ID COLON Type ARROW Type Match END . FunDecs  (2)
-	FunDecs : .  (3)
+state 55
+	Exp : IF Exp THEN . Exp ELSE Exp  (35)
 
-	FUN  shift 3
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 75
+
+
+state 56
+	Pats : Pat .  (17)
+	Pats : Pat . COMMA Pats  (18)
+
+	COMMA  shift 76
+	RPAR  reduce 17
+
+
+state 57
+	Pat : LPAR Pats . RPAR  (16)
+
+	RPAR  shift 77
+	.  error
+
+
+state 58
+	Dec : Pat EQUAL . Exp  (44)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 78
+
+
+state 59
+	Exp : LET Dec IN . Exp  (36)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 79
+
+
+state 60
+	Dec : Dec SEMICOLON . Dec  (45)
+
+	FALSE  shift 29
+	ID  shift 30
+	LPAR  shift 31
+	NULL  shift 32
+	NUM  shift 33
+	TRUE  shift 34
+	.  error
+
+	Pat  goto 35
+	Dec  goto 80
+
+
+state 61
+	Exp : LPAR Exp COMMA . Exps RPAR COLON ID  (26)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 81
+	Exps  goto 82
+
+
+state 62
+	Exp : LPAR Exp RPAR . COLON ID  (27)
+	Exp : LPAR Exp RPAR .  (41)
+
+	COLON  shift 83
+	AND  reduce 41
+	BAR  reduce 41
+	COMMA  reduce 41
+	ELSE  reduce 41
+	END  reduce 41
+	EOF  reduce 41
+	EQUAL  reduce 41
+	IN  reduce 41
+	LESSTHAN  reduce 41
+	MINUS  reduce 41
+	OF  reduce 41
+	OR  reduce 41
+	PLUS  reduce 41
+	RPAR  reduce 41
+	SEMICOLON  reduce 41
+	THEN  reduce 41
+
+
+state 63
+	Exp : NULL COLON ID .  (24)
+
+	.  reduce 24
+
+
+state 64
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp AND Exp .  (33)
+	Exp : Exp . OR Exp  (34)
+
+	AND  shift 41
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	BAR  reduce 33
+	COMMA  reduce 33
+	ELSE  reduce 33
+	END  reduce 33
+	EOF  reduce 33
+	IN  reduce 33
+	MINUS  reduce 33
+	OF  reduce 33
+	OR  reduce 33
+	PLUS  reduce 33
+	RPAR  reduce 33
+	SEMICOLON  reduce 33
+	THEN  reduce 33
+
+
+state 65
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp EQUAL Exp .  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+
+	AND  reduce 30
+	BAR  reduce 30
+	COMMA  reduce 30
+	ELSE  reduce 30
+	END  reduce 30
+	EOF  reduce 30
+	IN  reduce 30
+	MINUS  reduce 30
+	OF  reduce 30
+	OR  reduce 30
+	PLUS  reduce 30
+	RPAR  reduce 30
+	SEMICOLON  reduce 30
+	THEN  reduce 30
+
+
+state 66
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp LESSTHAN Exp .  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+
+	AND  reduce 31
+	BAR  reduce 31
+	COMMA  reduce 31
+	ELSE  reduce 31
+	END  reduce 31
+	EOF  reduce 31
+	IN  reduce 31
+	MINUS  reduce 31
+	OF  reduce 31
+	OR  reduce 31
+	PLUS  reduce 31
+	RPAR  reduce 31
+	SEMICOLON  reduce 31
+	THEN  reduce 31
+
+
+state 67
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp MINUS Exp .  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+
+	AND  shift 41
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	OR  shift 46
+	BAR  reduce 29
+	COMMA  reduce 29
+	ELSE  reduce 29
+	END  reduce 29
+	EOF  reduce 29
+	IN  reduce 29
+	MINUS  reduce 29
+	OF  reduce 29
+	PLUS  reduce 29
+	RPAR  reduce 29
+	SEMICOLON  reduce 29
+	THEN  reduce 29
+
+
+state 68
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+	Exp : Exp OR Exp .  (34)
+
+	AND  shift 41
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	OR  shift 46
+	BAR  reduce 34
+	COMMA  reduce 34
+	ELSE  reduce 34
+	END  reduce 34
+	EOF  reduce 34
+	IN  reduce 34
+	MINUS  reduce 34
+	OF  reduce 34
+	PLUS  reduce 34
+	RPAR  reduce 34
+	SEMICOLON  reduce 34
+	THEN  reduce 34
+
+
+state 69
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp PLUS Exp .  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+
+	AND  shift 41
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	OR  shift 46
+	BAR  reduce 28
+	COMMA  reduce 28
+	ELSE  reduce 28
+	END  reduce 28
+	EOF  reduce 28
+	IN  reduce 28
+	MINUS  reduce 28
+	OF  reduce 28
+	PLUS  reduce 28
+	RPAR  reduce 28
+	SEMICOLON  reduce 28
+	THEN  reduce 28
+
+
+state 70
+	Types : Type COMMA . Types  (10)
+
+	BOOL  shift 48
+	ID  shift 49
+	INT  shift 50
+	.  error
+
+	Type  goto 51
+	Types  goto 84
+
+
+state 71
+	TyDecs : TYPE ID EQUAL LPAR Types RPAR . TyDecs  (2)
+	TyDecs : .  (3)
+
+	TYPE  shift 3
+	CASE  reduce 3
+	FALSE  reduce 3
+	FUN  reduce 3
 	ID  reduce 3
+	IF  reduce 3
+	LET  reduce 3
 	LPAR  reduce 3
+	NOT  reduce 3
+	NULL  reduce 3
 	NUM  reduce 3
 	READ  reduce 3
+	TRUE  reduce 3
 	WRITE  reduce 3
 
-	FunDecs  goto 35
+	TyDecs  goto 85
 
 
-state 33
-	Match : Pat MATCHARROW . Exp  (7)
+state 72
+	FunDecs : FUN ID COLON Type ARROW . Type Match END FunDecs  (4)
 
-	ID  shift 7
-	LPAR  shift 8
-	NUM  shift 9
-	READ  shift 10
-	WRITE  shift 11
+	BOOL  shift 48
+	ID  shift 49
+	INT  shift 50
 	.  error
 
-	Exp  goto 36
+	Type  goto 86
 
 
-state 34
-	Match : Match . BAR Match  (8)
-	Match : Match BAR Match .  (8)
+state 73
+	Match : Match . BAR Match  (20)
+	Exp : CASE Exp OF Match . END  (37)
 
-	BAR  shift 31
-	END  reduce 8
+	BAR  shift 87
+	END  shift 88
+	.  error
 
 
-state 35
-	FunDecs : FUN ID COLON Type ARROW Type Match END FunDecs .  (2)
+state 74
+	Match : Pat . MATCHARROW Exp  (19)
+
+	MATCHARROW  shift 89
+	.  error
+
+
+state 75
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+	Exp : IF Exp THEN Exp . ELSE Exp  (35)
+
+	AND  shift 41
+	ELSE  shift 90
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	MINUS  shift 45
+	OR  shift 46
+	PLUS  shift 47
+	.  error
+
+
+state 76
+	Pats : Pat COMMA . Pats  (18)
+
+	FALSE  shift 29
+	ID  shift 30
+	LPAR  shift 31
+	NULL  shift 32
+	NUM  shift 33
+	TRUE  shift 34
+	.  error
+
+	Pat  goto 56
+	Pats  goto 91
+
+
+state 77
+	Pat : LPAR Pats RPAR .  (16)
+
+	.  reduce 16
+
+
+state 78
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+	Dec : Pat EQUAL Exp .  (44)
+
+	AND  shift 41
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	MINUS  shift 45
+	OR  shift 46
+	PLUS  shift 47
+	IN  reduce 44
+	SEMICOLON  reduce 44
+
+
+state 79
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+	Exp : LET Dec IN Exp .  (36)
+
+	AND  shift 41
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	MINUS  shift 45
+	OR  shift 46
+	PLUS  shift 47
+	BAR  reduce 36
+	COMMA  reduce 36
+	ELSE  reduce 36
+	END  reduce 36
+	EOF  reduce 36
+	IN  reduce 36
+	OF  reduce 36
+	RPAR  reduce 36
+	SEMICOLON  reduce 36
+	THEN  reduce 36
+
+
+state 80
+	Dec : Dec . SEMICOLON Dec  (45)
+	Dec : Dec SEMICOLON Dec .  (45)
+
+	SEMICOLON  shift 60
+	IN  reduce 45
+
+
+state 81
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+	Exps : Exp .  (42)
+	Exps : Exp . COMMA Exps  (43)
+
+	AND  shift 41
+	COMMA  shift 92
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	MINUS  shift 45
+	OR  shift 46
+	PLUS  shift 47
+	RPAR  reduce 42
+
+
+state 82
+	Exp : LPAR Exp COMMA Exps . RPAR COLON ID  (26)
+
+	RPAR  shift 93
+	.  error
+
+
+state 83
+	Exp : LPAR Exp RPAR COLON . ID  (27)
+
+	ID  shift 94
+	.  error
+
+
+state 84
+	Types : Type COMMA Types .  (10)
+
+	.  reduce 10
+
+
+state 85
+	TyDecs : TYPE ID EQUAL LPAR Types RPAR TyDecs .  (2)
 
 	.  reduce 2
 
 
-state 36
-	Match : Pat MATCHARROW Exp .  (7)
-	Exp : Exp . PLUS Exp  (11)
-	Exp : Exp . MINUS Exp  (12)
+state 86
+	FunDecs : FUN ID COLON Type ARROW Type . Match END FunDecs  (4)
 
-	MINUS  shift 18
-	PLUS  shift 19
-	BAR  reduce 7
-	END  reduce 7
+	FALSE  shift 29
+	ID  shift 30
+	LPAR  shift 31
+	NULL  shift 32
+	NUM  shift 33
+	TRUE  shift 34
+	.  error
+
+	Match  goto 95
+	Pat  goto 74
 
 
-40 terminals, 8 nonterminals
-18 grammar rules, 37 states
+state 87
+	Match : Match BAR . Match  (20)
+
+	FALSE  shift 29
+	ID  shift 30
+	LPAR  shift 31
+	NULL  shift 32
+	NUM  shift 33
+	TRUE  shift 34
+	.  error
+
+	Match  goto 96
+	Pat  goto 74
+
+
+state 88
+	Exp : CASE Exp OF Match END .  (37)
+
+	.  reduce 37
+
+
+state 89
+	Match : Pat MATCHARROW . Exp  (19)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 97
+
+
+state 90
+	Exp : IF Exp THEN Exp ELSE . Exp  (35)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 98
+
+
+state 91
+	Pats : Pat COMMA Pats .  (18)
+
+	.  reduce 18
+
+
+state 92
+	Exps : Exp COMMA . Exps  (43)
+
+	CASE  shift 11
+	FALSE  shift 12
+	ID  shift 13
+	IF  shift 14
+	LET  shift 15
+	LPAR  shift 16
+	NOT  shift 17
+	NULL  shift 18
+	NUM  shift 19
+	READ  shift 20
+	TRUE  shift 21
+	WRITE  shift 22
+	.  error
+
+	Exp  goto 81
+	Exps  goto 99
+
+
+state 93
+	Exp : LPAR Exp COMMA Exps RPAR . COLON ID  (26)
+
+	COLON  shift 100
+	.  error
+
+
+state 94
+	Exp : LPAR Exp RPAR COLON ID .  (27)
+
+	.  reduce 27
+
+
+state 95
+	FunDecs : FUN ID COLON Type ARROW Type Match . END FunDecs  (4)
+	Match : Match . BAR Match  (20)
+
+	BAR  shift 87
+	END  shift 101
+	.  error
+
+
+state 96
+	Match : Match . BAR Match  (20)
+	Match : Match BAR Match .  (20)
+
+	BAR  shift 87
+	END  reduce 20
+
+
+state 97
+	Match : Pat MATCHARROW Exp .  (19)
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+
+	AND  shift 41
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	MINUS  shift 45
+	OR  shift 46
+	PLUS  shift 47
+	BAR  reduce 19
+	END  reduce 19
+
+
+state 98
+	Exp : Exp . PLUS Exp  (28)
+	Exp : Exp . MINUS Exp  (29)
+	Exp : Exp . EQUAL Exp  (30)
+	Exp : Exp . LESSTHAN Exp  (31)
+	Exp : Exp . AND Exp  (33)
+	Exp : Exp . OR Exp  (34)
+	Exp : IF Exp THEN Exp ELSE Exp .  (35)
+
+	AND  shift 41
+	EQUAL  shift 43
+	LESSTHAN  shift 44
+	MINUS  shift 45
+	OR  shift 46
+	PLUS  shift 47
+	BAR  reduce 35
+	COMMA  reduce 35
+	ELSE  reduce 35
+	END  reduce 35
+	EOF  reduce 35
+	IN  reduce 35
+	OF  reduce 35
+	RPAR  reduce 35
+	SEMICOLON  reduce 35
+	THEN  reduce 35
+
+
+state 99
+	Exps : Exp COMMA Exps .  (43)
+
+	.  reduce 43
+
+
+state 100
+	Exp : LPAR Exp COMMA Exps RPAR COLON . ID  (26)
+
+	ID  shift 102
+	.  error
+
+
+state 101
+	FunDecs : FUN ID COLON Type ARROW Type Match END . FunDecs  (4)
+	FunDecs : .  (5)
+
+	FUN  shift 7
+	CASE  reduce 5
+	FALSE  reduce 5
+	ID  reduce 5
+	IF  reduce 5
+	LET  reduce 5
+	LPAR  reduce 5
+	NOT  reduce 5
+	NULL  reduce 5
+	NUM  reduce 5
+	READ  reduce 5
+	TRUE  reduce 5
+	WRITE  reduce 5
+
+	FunDecs  goto 103
+
+
+state 102
+	Exp : LPAR Exp COMMA Exps RPAR COLON ID .  (26)
+
+	.  reduce 26
+
+
+state 103
+	FunDecs : FUN ID COLON Type ARROW Type Match END FunDecs .  (4)
+
+	.  reduce 4
+
+
+38 terminals, 13 nonterminals
+47 grammar rules, 104 states
