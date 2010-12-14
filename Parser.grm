@@ -92,7 +92,7 @@ Exp :	  NUM		{ Cat.Num $1 }
         | LPAR Exp COMMA Exps RPAR COLON ID
                         { Cat.MkTuple ( $2 :: $4, #1 $7, $1 ) }
         | LPAR Exp RPAR COLON ID 
-                        { Cat.MkTuple ($2, #1 $5, $1) }
+                        { Cat.MkTuple ([$2], #1 $5, $1) }
 	| Exp PLUS Exp	{ Cat.Plus ($1, $3, $2) }
 	| Exp MINUS Exp	{ Cat.Minus ($1, $3, $2) }
         | Exp EQUAL Exp { Cat.Equal ($1, $3, $2) }
