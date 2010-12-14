@@ -52,12 +52,25 @@ struct
 	      Mips.BNE (v,t,fail)],
 	     vtable)
 	end
+    | Cat.TrueP (pos) =>
+        let
+          val t = "_constPat_"^newName()
+        in
+          ([Mips.LI (t, makeConst 1),
+            Mips.BNE (v, t, fail)],
+            vtable)
+        end
+    | Cat.FalseP (pos) =>
+        ([Mips.BNE (v, "0", fail)], vtable)
+    (*| Cat.NullP (pos) => TODO *)
     | Cat.VarP (x,pos) =>
         let
           val xt = "_patVar_"^x^"_"^newName()
         in
           ([Mips.MOVE (xt,v)], (x,xt)::vtable)
         end
+(*    | Cat.TupleP  TODO *)
+    | _ => raise Error ("TERRIBLE FAILURE", (0,0))
 
   (* compile expression *)
   fun compileExp e vtable place =
@@ -68,6 +81,9 @@ struct
 	else
 	  [Mips.LUI (place, makeConst (n div 65536)),
 	   Mips.ORI (place, place, makeConst (n mod 65536))]
+    | Cat.True (pos) => [Mips.LI (place, makeConst 1)]
+    | Cat.False (pos) => [Mips.LI (place, makeConst 0)]
+ (* TODO NULL *)
     | Cat.Var (x,pos) => [Mips.MOVE (place, lookup x vtable pos)]
     | Cat.Plus (e1,e2,pos) =>
         let
@@ -87,6 +103,85 @@ struct
 	in
 	  code1 @ code2 @ [Mips.SUB (place,t1,t2)]
 	end
+    | Cat.Equal (e1, e2, pos) =>
+        let
+          val t1 = "_equal1_"^newName()
+          val t2 = "_equal2_"^newName()
+          val l1 = "_equallabel1_"^newName()
+          val l2 = "_equallabel2_"^newName()
+          val code1 = compileExp e1 vtable t1
+          val code2 = compileExp e2 vtable t2
+	in
+	  code1 @ code2 @ 
+          [Mips.BNE (t1,t2,l1), 
+           Mips.LI (place, makeConst 1),
+           Mips.J l2,
+           Mips.LABEL l1,
+           Mips.LI (place, "0"),
+           Mips.LABEL l2]
+	end
+    | Cat.Less (e1, e2, pos) =>
+        let
+          val t1 = "_less1_"^newName()
+          val t2 = "_less2_"^newName()
+          val l1 = "_lesslabel1_"^newName()
+          val l2 = "_lesslabel2_"^newName()
+          val code1 = compileExp e1 vtable t1
+          val code2 = compileExp e2 vtable t2
+	in
+	  code1 @ code2 @ 
+          [Mips.LUI (place, "0"),
+           Mips.SLT (place,t1,t2)]
+	end
+    | Cat.Not (e, pos) =>
+        let
+          val t = "_not_"^newName()
+          val code = compileExp e vtable t
+        in
+          code @ [Mips.XORI (place, t, makeConst 1)]
+        end
+    | Cat.And (e1, e2, pos) =>
+        let
+          val t1 = "_and1_"^newName()
+          val t2 = "_and2_"^newName()
+          val code1 = compileExp e1 vtable t1
+          val code2 = compileExp e2 vtable t2
+        in
+          code1 @ code2 @
+          [Mips.AND (place, t1, t2)]
+        end
+    | Cat.Or (e1, e2, pos) =>
+        let
+          val t1 = "_or1_"^newName()
+          val t2 = "_or2_"^newName()
+          val code1 = compileExp e1 vtable t1
+          val code2 = compileExp e2 vtable t2
+        in
+          code1 @ code2 @
+          [Mips.OR (place, t1, t2)]
+        end
+(* TODO let *)
+    | Cat.If (eif, ethen, eelse, pos) =>
+        let
+          val t1 = "_if_"^newName()
+          val t2 = "_then_"^newName()
+          val t3 = "_else_"^newName()
+          val l1 = "_elselabel_"^newName()
+          val l2 = "_exitlabel_"^newName()
+          val code1 = compileExp eif vtable t1
+          val code2 = compileExp ethen vtable t2
+          val code3 = compileExp eelse vtable t3
+	in (* FEJL FEJL TODO *)
+          code1 @
+	  [Mips.BEQ (t1, "0", l1)]
+          @ code2 @
+          [Mips.J l2, 
+           Mips.LABEL l1]
+          @ code3 @
+          [Mips.LABEL l2]
+        end
+(* TODO MkTuple *)
+(* TODO Case *)
     | Cat.Apply (f,e,pos) =>
 	let
 	  val t1 = "_apply_"^newName()
@@ -107,6 +202,7 @@ struct
 	   Mips.LA ("4","_cr_"),
 	   Mips.LI ("2","4"),  (* write_string syscall *)
 	   Mips.SYSCALL]
+    | _ => raise Error ("OMG SOmETHING IS BAD", (0,0))
 
   and compileMatch [] arg res endLabel failLabel vtable =
         [Mips.J failLabel]
