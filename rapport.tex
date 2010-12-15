@@ -1,0 +1,146 @@
+\documentclass [10pt,a4paper]{article}
+\usepackage[danish]{babel}
+\usepackage{a4wide}
+\usepackage[T1]{fontenc}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fancyhdr}
+\usepackage{ucs}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+
+\pagestyle{fancy}
+\fancyhead[LO]{Michael Thuling & Philip Munksgaard}
+\fancyhead[RO]{Oversættere: G-Opgave}
+\fancyfoot[CO]{\thepage}
+
+
+\title{G-Opgave}
+\author{Michael Thulin & Philip Munksgaard}
+
+\begin{document}
+\maketitle
+
+\section{Tilføjelser til Lexer.lex}
+
+Vi har tilføjet de manglende keywords og tokens til Lexer.lex. 
+
+\section{Parser.grm}
+
+Her startede vi med at tilføje de manglende tokens i
+grammatikken. Derefter tilføjede vi de manglende typer og så de
+manglende produktioner. Så endte vi op med mere end 15 shift/reduce
+konflikter. For at slippe af med nogle af disse, eliminerede vi
+venstre-rekursion i adskillige af produktionerne, heriblandt Types,
+Pats og Exps. I nogle produktionerne, f.eks. Dec og Match, valgte vi
+at elmiminere tvetydighed ved at sætte associativitet korrekt.
+Den eneste shift/reduce-fejl der voldte os nævneværdige problemer var
+tvetydighed omkring $LPAR Exp RPAR$, som vi valgte at løse ved at
+dele produktionen $Exp \to LPAR Exps RPAR COLON ID$ op i to
+produktioner, $Exp \to LPAR Exp RPAR COLON ID$ og $Exp \to LPAR Exp
+COMMA Exps RPAR COLON ID$, jvf. bilag 1.
+
+Parser.grm oversætter nu uden fejl.
+
+\section{Type.sml}
+
+Vi har lavet de nødvendige tilføjelser i checkType, checkPat,
+checkExp. Derudover tilføjede vi kode til at hente type-deklarationer
+ud af tyDecs. 
+
+\begin{tabular}{l | l}
+  \hline
+  \multicolumn{2}{|l|}{checkExpxp(Exp, vtable, ftable, ttable) = case
+    Exp of} \\ \hline
+   true & bool \\ \hline
+  false & bool \\ \hline
+  null & t = lookup x ttable \\
+  & if t = unbound \\
+  & then error() \\
+  & else TyVar s \\ \hline
+  id & t = lookup x vtable \\
+  & if t = unbound \\
+  & then error() \\
+  & else t \\ \hline
+  Exp_1 = Exp_2 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
+  & t2 = checkExp(Exp_1, vtable, ftable, ttable) \\ 
+  & if t1 = int and t2 = int \\
+  & then bool \\
+  & else error() \\ \hline
+  if Exp_1 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
+  then Exp_2 & t2 = checkExp(Exp_2, vtable, ftable, ttable) \\
+  else Exp_3 & t3 = checkExp(Exp_3, vtable, ftable, ttable) \\
+  & if t_1 = bool and t_2 = t_3 \\
+  & then t2 \\
+  & else error() \\ \hline
+  Exp_1 < Exp_2 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
+  & t2 = checkExp(Exp_1, vtable, ftable, ttable) \\ 
+  & if t1 = int and t2 = int \\
+  & then bool \\
+  & else error() \\ \hline
+  not Exp_1 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
+  & if t1 = bool \\
+  & then bool \\
+  & else error() \\ \hline
+  Exp_1 and Exp_2 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
+  & t2 = checkExp(Exp_1, vtable, ftable, ttable) \\ 
+  & if t1 = bool and t2 = bool \\
+  & then bool \\
+  & else error() \\ \hline
+  Exp_1 or Exp_2 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
+  & t2 = checkExp(Exp_1, vtable, ftable, ttable) \\ 
+  & if t1 = bool and t2 = bool \\
+  & then bool \\
+  & else error() \\ \hline
+  let id = Dec_1 & t1 = checkDec(Dec_1, vtable, ftable, ttable) \\
+  in Exp_1 & checkExp(Exp_1, vtable, ftable, ttable) \\ \hline
+  (Exps) : id & ty = lookup s ttable \\
+  & if ty = unbound \\
+  & then error() \\
+  & else checkTuple Exps ty vtable ftable ttable \\
+  & TyVar id \\ \hline
+  case Exp_1 of & ty = checkExp(Exp_1, vtable, ftable, ttable) \\
+  in Match_1 end & checkMath m ty vtable ftable ttablee pos \\ \hline
+\end{tabular}
+
+\section{Compiler.sml}
+
+\newpage 
+
+\section{Bilag 1: Produktioner for Exp}
+
+\begin{lstlisting}[frame=single,language=Clean]    
+Exp :	  NUM		{ Cat.Num $1 }
+        | TRUE          { Cat.True $1 }
+        | FALSE         { Cat.False $1 }
+        | NULL COLON ID { Cat.Null (#1 $3, $1) }
+	| ID            { Cat.Var $1 }
+        | LPAR Exp COMMA Exps RPAR COLON ID
+                        { Cat.MkTuple ( $2 :: $4, #1 $7, $1 ) }
+        | LPAR Exp RPAR COLON ID 
+                        { Cat.MkTuple ([$2], #1 $5, $1) }
+	| Exp PLUS Exp	{ Cat.Plus ($1, $3, $2) }
+	| Exp MINUS Exp	{ Cat.Minus ($1, $3, $2) }
+        | Exp EQUAL Exp { Cat.Equal ($1, $3, $2) }
+        | Exp LESSTHAN Exp
+                        { Cat.Less ($1, $3, $2) }
+        | NOT Exp       { Cat.Not ($2, $1) }
+        | Exp AND Exp   { Cat.And ($1, $3, $2) }
+        | Exp OR Exp    { Cat.Or ($1, $3, $2) }
+        | IF Exp THEN Exp ELSE Exp
+                        { Cat.If ($2, $4, $6, $1) }
+        | LET Dec IN Exp
+                        { Cat.Let ($2, $4, $1) }
+        | CASE Exp OF Match END
+                        { Cat.Case ($2, $4, $1) }
+	| ID Exp %prec WRITE
+			{ Cat.Apply (#1 $1, $2, #2 $1) }
+	| READ		{ Cat.Read $1 }
+	| WRITE Exp	{ Cat.Write ($2, $1) }
+	| LPAR Exp RPAR { $2 }
+;
+\end{lstlisting}
+
+\end{document}
