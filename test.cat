@@ -1,0 +1,28 @@
+type testpair = (int, int)
+
+fun booltest : int -> bool
+      n => false or true
+end
+
+fun boolToInt : bool -> int
+      true => 1
+|     false => 0
+end
+
+fun ifTest : int -> int
+      n => if n = 5 then 1 else 0
+end
+
+fun caseTest : int -> int
+      n => case n of 
+             3 => 10
+           | n => n+5
+           end
+end
+
+fun mktupletest : testpair -> int
+  (2, 2) => 1
+| (n, m) => n + m
+end
+
+write mktupletest ((2, 2) : testpair)
