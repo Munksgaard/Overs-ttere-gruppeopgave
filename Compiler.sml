@@ -71,9 +71,22 @@ struct
           ([Mips.MOVE (xt,v)], (x,xt)::vtable)
         end
     | Cat.TupleP (pats, pos) =>
-        ([Mips.BEQ (v, "0", fail)], vtable)
-    | _ => raise Error ("TERRIBLE FAILURE", (0,0))
+        compilePats pats v vtable fail 0
+        
+(*    | _ => raise Error ("TERRIBLE FAILURE", (0,0)) *)
 
+  and compilePats [] v vtable fail offset = ([], [])
+    | compilePats (pat :: pats) v vtable fail offset =
+        let
+          val x = "_patTuple_"^newName()
+          val pv = "_pa"
+          val code1 = [Mips.LW (x, v, makeConst offset)]
+          val (code2, vtable1) = compilePat pat x vtable fail
+          val (code3, vtable2) = compilePats pats v (vtable1 @ vtable) fail (offset + 4)
+        in
+          (code1 @ code2 @ code3, vtable2 @ vtable1 @ vtable)
+        end
+        
   (* compile expression *)
   fun compileExp e vtable place =
     case e of
@@ -197,12 +210,13 @@ struct
           @ code3 @
           [Mips.LABEL l2]
         end
-(* TODO MkTuple *)
     | Cat.MkTuple (es, s, pos) =>
         let
-          val code1 = compileTuple es vtable place
+          val (code1, offset) = compileTuple es [] vtable 0
         in
-          code1
+          code1 @
+          [Mips.ADDI (place, HP, "0"),
+          Mips.ADDI (HP,HP,makeConst offset)]  (* move HP up *)
         end
     | Cat.Case (e, m, (line, col)) =>
         let
@@ -255,16 +269,19 @@ struct
 	  code1 @ code2 @ [Mips.J endLabel, Mips.LABEL next] @ code3
 	end
 
-  and compileTuple [] _ _= [] 
-    | compileTuple (e :: es) vtable place =
+  and compileTuple [] tuplecode vtable offset = 
+        (tuplecode, offset)
+    | compileTuple (e :: es) tuplecode vtable offset  =
         let
           val t1 = "_tuple1_"^newName()
-          val t2 = "_tuple2_"^newName()
           val code1 = compileExp e vtable t1
-          val code2 = compileTuple es vtable t2
-        in 
-          code1 @ 
-          [Mips,
+        in
+          compileTuple es
+                       (tuplecode @
+                        code1 @ 
+                        [Mips.SW (t1, HP, makeConst offset)])
+                       vtable
+                       (offset + 4)
         end
 
   (* code for saving and restoring callee-saves registers *)
