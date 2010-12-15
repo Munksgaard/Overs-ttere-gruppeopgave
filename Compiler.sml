@@ -79,7 +79,6 @@ struct
     | compilePats (pat :: pats) v vtable fail offset =
         let
           val x = "_patTuple_"^newName()
-          val pv = "_pa"
           val code1 = [Mips.LW (x, v, makeConst offset)]
           val (code2, vtable1) = compilePat pat x vtable fail
           val (code3, vtable2) = compilePats pats v (vtable1 @ vtable) fail (offset + 4)
@@ -98,7 +97,7 @@ struct
 	   Mips.ORI (place, place, makeConst (n mod 65536))]
     | Cat.True (pos) => [Mips.LI (place, makeConst 1)]
     | Cat.False (pos) => [Mips.LI (place, makeConst 0)]
- (* TODO NULL *)
+    | Cat.Null (x,pos) => [Mips.LI (place, makeConst 0)]
     | Cat.Var (x,pos) => [Mips.MOVE (place, lookup x vtable pos)]
     | Cat.Plus (e1,e2,pos) =>
         let
@@ -175,24 +174,20 @@ struct
           code1 @ code2 @
           [Mips.OR (place, t1, t2)]
         end
-   (* VI SKAL LAVE EN COMPILEDEC-FUNKTION!!!!
- | Cat.Let (d, e, (line, col)) =>
+    | Cat.Let (d, e, (line, col)) =>
         let
           val t1 = "_let1_"^newName()
           val t2 = "_let2_"^newName()
           val fail = "_letfaillabel_"^newName()
-          val endlabel = "_letendlabel_"^newName()
-          val code1 = compileExp e vtable t1
-          val code2 = compileMatch d t1 place endlabel fail vtable
           val errorcode     (* if match fails *)
 	    = [Mips.LABEL fail,
 	       Mips.LI ("5",makeConst line),
 	       Mips.J "_Error_"]
+          val (code1, vtable1) = compileDec d vtable fail
+          val code2 = compileExp e (vtable1 @ vtable) place
         in
-          code1 @ code2 @
-          errorcode @
-          [Mips.LABEL endlabel]
-        end *)
+          code1 @ code2
+        end
     | Cat.If (eif, ethen, eelse, pos) =>
         let
           val t1 = "_if_"^newName()
@@ -269,6 +264,19 @@ struct
 	  code1 @ code2 @ [Mips.J endLabel, Mips.LABEL next] @ code3
 	end
 
+  (* compile declarations and return (code,vtable) *)
+  and compileDec [] vtable fail =
+        ([], [])
+    | compileDec ((p,e,pos) :: ds) vtable fail =
+        let
+          val t = "_dec_"^newName()
+          val code1 = compileExp e vtable t
+          val (code2, vtable1) = compilePat p t vtable fail
+          val (code3, vtable2) = compileDec ds (vtable1 @ vtable) fail
+        in
+          (code1 @ code2 @ code3, vtable2 @ vtable1 @ vtable)
+        end
+        
   and compileTuple [] tuplecode vtable offset = 
         (tuplecode, offset)
     | compileTuple (e :: es) tuplecode vtable offset  =
