@@ -121,6 +121,18 @@ de dele af Type.sml vi har lavet mest om i.
   & vtable1 @ td @ vtable \\ \hline
 \end{tabular}
 
+\begin{tabular}{|l|l|}
+  \hline
+  \multicolumn{2}{|l|}{checkTuple(e, ty, vtable, ftable, ttable) = case (e, ty) of} \\ \hline
+  	(e, ty) & If checkExp e vtable ftable ttable = ty \\
+            & then [ty] \\
+        	& else error() \\ 
+			\hline
+	(e :: es, ty :: tys) & if checkExp e vtable ftable ttable  = ty \\
+			        	 & then ty :: checkTuple es tys vtable ftable ttable \\
+			             & else error() \\ \hline
+\end{tabular}
+
 \section{Compiler.sml}
 
 \newpage 
