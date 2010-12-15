@@ -59,7 +59,7 @@ Type :	  INT		{ Cat.Int $1 }
         | ID            { Cat.TyVar $1 }
 ;
 
-Types:    Type          { [$1] }
+Types :   Type          { [$1] }
         | Type COMMA Types
                         { $1 :: $3 }
 ;

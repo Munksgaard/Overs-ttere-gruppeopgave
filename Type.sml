@@ -223,11 +223,6 @@ struct
     | getTyDec (ty :: tys) ttable =
         (checkType ty ttable) :: (getTyDec tys ttable)
     | getTyDec _ _ = raise Error ("Bad error in getTyDec!", (0,0))
-(*
-        [checkType ty ((s, []) :: ttable)]
-    | getTyDec ((ty as Cat.TyVar (s, _)) :: tys) ttable =
-        (checkType ty ((s, []) :: ttable)) :: (getTyDec tys ttable)
-*)    
 
   fun getTyDecs [] ttable = ttable
     | getTyDecs ((s, tys, pos) :: tyDecs) ttable =

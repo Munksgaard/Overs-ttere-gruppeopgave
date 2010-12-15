@@ -12,13 +12,13 @@
 \usepackage{color}
 
 \pagestyle{fancy}
-\fancyhead[LO]{Michael Thuling & Philip Munksgaard}
+\fancyhead[LO]{Michael Thuling \& Philip Munksgaard}
 \fancyhead[RO]{Oversættere: G-Opgave}
 \fancyfoot[CO]{\thepage}
 
 
 \title{G-Opgave}
-\author{Michael Thulin & Philip Munksgaard}
+\author{Michael Thulin \& Philip Munksgaard}
 
 \begin{document}
 \maketitle
@@ -50,9 +50,12 @@ Vi har lavet de nødvendige tilføjelser i checkType, checkPat,
 checkExp. Derudover tilføjede vi kode til at hente type-deklarationer
 ud af tyDecs. 
 
-\begin{tabular}{l | l}
+Herunder ses pseudokode for checkExp, checkDec og checkTuple, som er
+de dele af Type.sml vi har lavet mest om i.
+
+\begin{tabular}{|l|l|}
   \hline
-  \multicolumn{2}{|l|}{checkExpxp(Exp, vtable, ftable, ttable) = case
+  \multicolumn{2}{|l|}{checkExp(Exp, vtable, ftable, ttable) = case
     Exp of} \\ \hline
    true & bool \\ \hline
   false & bool \\ \hline
@@ -64,45 +67,58 @@ ud af tyDecs.
   & if t = unbound \\
   & then error() \\
   & else t \\ \hline
-  Exp_1 = Exp_2 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
-  & t2 = checkExp(Exp_1, vtable, ftable, ttable) \\ 
+  Exp1 = Exp2 & t1 = checkExp(Exp1, vtable, ftable, ttable) \\
+  & t2 = checkExp(Exp1, vtable, ftable, ttable) \\ 
   & if t1 = int and t2 = int \\
   & then bool \\
   & else error() \\ \hline
-  if Exp_1 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
-  then Exp_2 & t2 = checkExp(Exp_2, vtable, ftable, ttable) \\
-  else Exp_3 & t3 = checkExp(Exp_3, vtable, ftable, ttable) \\
-  & if t_1 = bool and t_2 = t_3 \\
+  if Exp1 & t1 = checkExp(Exp1, vtable, ftable, ttable) \\
+  then Exp2 & t2 = checkExp(Exp2, vtable, ftable, ttable) \\
+  else Exp3 & t3 = checkExp(Exp3, vtable, ftable, ttable) \\
+  & if t1 = bool and t2 = t3 \\
   & then t2 \\
   & else error() \\ \hline
-  Exp_1 < Exp_2 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
-  & t2 = checkExp(Exp_1, vtable, ftable, ttable) \\ 
+  Exp1 < Exp2 & t1 = checkExp(Exp1, vtable, ftable, ttable) \\
+  & t2 = checkExp(Exp1, vtable, ftable, ttable) \\ 
   & if t1 = int and t2 = int \\
   & then bool \\
   & else error() \\ \hline
-  not Exp_1 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
+  not Exp1 & t1 = checkExp(Exp1, vtable, ftable, ttable) \\
   & if t1 = bool \\
   & then bool \\
   & else error() \\ \hline
-  Exp_1 and Exp_2 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
-  & t2 = checkExp(Exp_1, vtable, ftable, ttable) \\ 
+  Exp1 and Exp2 & t1 = checkExp(Exp1, vtable, ftable, ttable) \\
+  & t2 = checkExp(Exp1, vtable, ftable, ttable) \\ 
   & if t1 = bool and t2 = bool \\
   & then bool \\
   & else error() \\ \hline
-  Exp_1 or Exp_2 & t1 = checkExp(Exp_1, vtable, ftable, ttable) \\
-  & t2 = checkExp(Exp_1, vtable, ftable, ttable) \\ 
+  Exp1 or Exp2 & t1 = checkExp(Exp1, vtable, ftable, ttable) \\
+  & t2 = checkExp(Exp1, vtable, ftable, ttable) \\ 
   & if t1 = bool and t2 = bool \\
   & then bool \\
   & else error() \\ \hline
-  let id = Dec_1 & t1 = checkDec(Dec_1, vtable, ftable, ttable) \\
-  in Exp_1 & checkExp(Exp_1, vtable, ftable, ttable) \\ \hline
+  let id = Dec1 & t1 = checkDec(Dec1, vtable, ftable, ttable) \\
+  in Exp1 & checkExp(Exp1, vtable, ftable, ttable) \\ \hline
   (Exps) : id & ty = lookup s ttable \\
   & if ty = unbound \\
   & then error() \\
   & else checkTuple Exps ty vtable ftable ttable \\
   & TyVar id \\ \hline
-  case Exp_1 of & ty = checkExp(Exp_1, vtable, ftable, ttable) \\
-  in Match_1 end & checkMath m ty vtable ftable ttablee pos \\ \hline
+  case Exp1 of & ty = checkExp(Exp1, vtable, ftable, ttable) \\
+  in Match1 end & checkMath m ty vtable ftable ttablee pos \\ \hline
+\end{tabular}
+
+\begin{tabular}{|l|l|}
+  \hline
+  \multicolumn{2}{|l|}{decs, vtable, ftable, ttable) = case
+    decs of} \\ \hline
+  (pat, e) & ty = checkExp e vtable ftable ttable \\
+  & vtable1 = checkPat p ty ttable \\
+  vtable1 @ vtable \\ \hline
+  (pat, e) :: decs & ty = checkExp e vtable ftable ttable \\
+  & vtable1 = checkPat pat ty ttable \\
+  & td = checkDec decs (vtable1 @ vtable) ftable ttable \\
+  & vtable1 @ td @ vtable \\ \hline
 \end{tabular}
 
 \section{Compiler.sml}
