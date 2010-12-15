@@ -110,14 +110,14 @@ de dele af Type.sml vi har lavet mest om i.
 
 \begin{tabular}{|l|l|}
   \hline
-  \multicolumn{2}{|l|}{decs, vtable, ftable, ttable) = case
+  \multicolumn{2}{|l|}{checkDec (decs, vtable, ftable, ttable) = case
     decs of} \\ \hline
   (pat, e) & ty = checkExp e vtable ftable ttable \\
   & vtable1 = checkPat p ty ttable \\
   vtable1 @ vtable \\ \hline
   (pat, e) :: decs & ty = checkExp e vtable ftable ttable \\
   & vtable1 = checkPat pat ty ttable \\
-  & td = checkDec decs (vtable1 @ vtable) ftable ttable \\
+  & td = checkDec (decs, (vtable1 @ vtable), ftable, ttable) \\
   & vtable1 @ td @ vtable \\ \hline
 \end{tabular}
 
