@@ -200,6 +200,14 @@ Vores compiler kompilerer alle test-filerne korrekt. Der er dog et par
 af error-filerne som ikke genererer fejl. Det gælder error14.cat,
 error17.cat, error18.cat og error19.cat. Fejlende skyldes manglende
 tjek i Type.sml.
+Vi mangler f.eks. at teste let deklarations-typerne ordenligt. Hvis
+der deklareres to variable med samme navn bliver det ikke
+dedekteret. Med lidt mere arbejde i typecheckeren ville vores løsning
+fungere fuldstændig efter hensigten.
+
+\section {Tests}
+
+Vi har ikke kunnet finde nogen mangler i de udleverede tests
 
 \newpage 
 
