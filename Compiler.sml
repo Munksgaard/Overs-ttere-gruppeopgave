@@ -80,7 +80,6 @@ struct
         in
           ([Mips.BEQ (v, "0", fail)] @ code1, vtable1)
         end
-(*    | _ => raise Error ("TERRIBLE FAILURE", (0,0)) *)
 
   and compilePats [] v vtable fail offset = ([], [])
     | compilePats (pat :: pats) v vtable fail offset =
@@ -261,7 +260,6 @@ struct
 	   Mips.LA ("4","_cr_"),
 	   Mips.LI ("2","4"),  (* write_string syscall *)
 	   Mips.SYSCALL]
-    | _ => raise Error ("OMG SOmETHING IS BAD", (0,0))
 
   and compileMatch [] arg res endLabel failLabel vtable =
         [Mips.J failLabel]

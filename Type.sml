@@ -81,7 +81,6 @@ struct
           (Int,Int) => Int
         | _ => raise Error ("Non-int argument to -",pos))
     | Cat.Equal (e1, e2, pos) =>
-       (* Vi har ikke implementeret equal for bools *)
        (case (checkExp e1 vtable ftable ttable,
               checkExp e2 vtable ftable ttable) of
           (Int,Int) => Bool
@@ -186,7 +185,7 @@ struct
         in
           vtable1 @ td @ vtable
         end
-    | checkDec _ _ _ _ = raise Error ("Something went terribly wrong!", (0,0))
+    | checkDec _ _ _ _ = raise Error ("Got empty dec", (0,0))
 
   and checkTuple [e] [ty] vtable ftable ttable pos =
         if checkExp e vtable ftable ttable = ty

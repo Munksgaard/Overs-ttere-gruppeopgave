@@ -1,5 +1,7 @@
 type testpair = (int, int)
 
+type list = (int, list)
+
 fun booltest : int -> bool
       n => false or true
 end
@@ -35,7 +37,17 @@ fun lettest2 : int -> int
          (lettest n) + m
        end
 
-ting der fejler: rwlist qsort treesort
-det har noget med at indlæse lister at gøre
+//ting der fejler: rwlist qsort treesort
+//det har noget med at indlæse lister at gøre
 
-write lettest2 5
+fun tupletest : int -> list
+  n => (8, (5, @ : list) : list) : list
+end
+
+fun printList : list -> bool
+//  @ => true
+  (n, l) => let t = write n in printList l
+| @ => true
+end
+
+printList  (3, (6,  @ : list) : list) : list
