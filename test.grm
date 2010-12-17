@@ -1,0 +1,23 @@
+%token HEJ
+%token LPAR
+%token RPAR
+%token COMMA
+%token COLON ID
+
+%start Prog
+%type <Cat.Prog> Prog
+%type <Cat.Exp> Exp
+%type <Cat.Exp list> Exps
+
+%%
+
+Prog :    Exp { [] }
+;
+
+Exp :     LPAR Exp RPAR { [] }
+        | LPAR Exp COMMA Exps RPAR COLON { [] }
+        | LPAR Exp RPAR COLON { [] }
+;
+
+Exps :    Exp { [] }
+        | Exp COMMA Exps { [] }

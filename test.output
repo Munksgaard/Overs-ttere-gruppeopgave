@@ -1,0 +1,143 @@
+   0  $accept : %entry% $end
+
+   1  Prog : Exp
+
+   2  Exp : LPAR Exp RPAR
+   3      | LPAR Exp COMMA Exps RPAR COLON
+   4      | LPAR Exp RPAR COLON
+
+   5  Exps : Exp
+   6       | Exp COMMA Exps
+
+   7  %entry% : '\001' Prog
+
+state 0
+	$accept : . %entry% $end  (0)
+
+	'\001'  shift 1
+	.  error
+
+	%entry%  goto 2
+
+
+state 1
+	%entry% : '\001' . Prog  (7)
+
+	LPAR  shift 3
+	.  error
+
+	Prog  goto 4
+	Exp  goto 5
+
+
+state 2
+	$accept : %entry% . $end  (0)
+
+	$end  accept
+
+
+state 3
+	Exp : LPAR . Exp RPAR  (2)
+	Exp : LPAR . Exp COMMA Exps RPAR COLON  (3)
+	Exp : LPAR . Exp RPAR COLON  (4)
+
+	LPAR  shift 3
+	.  error
+
+	Exp  goto 6
+
+
+state 4
+	%entry% : '\001' Prog .  (7)
+
+	.  reduce 7
+
+
+state 5
+	Prog : Exp .  (1)
+
+	.  reduce 1
+
+
+state 6
+	Exp : LPAR Exp . RPAR  (2)
+	Exp : LPAR Exp . COMMA Exps RPAR COLON  (3)
+	Exp : LPAR Exp . RPAR COLON  (4)
+
+	COMMA  shift 7
+	RPAR  shift 8
+	.  error
+
+
+state 7
+	Exp : LPAR Exp COMMA . Exps RPAR COLON  (3)
+
+	LPAR  shift 3
+	.  error
+
+	Exp  goto 9
+	Exps  goto 10
+
+
+state 8
+	Exp : LPAR Exp RPAR .  (2)
+	Exp : LPAR Exp RPAR . COLON  (4)
+
+	COLON  shift 11
+	$end  reduce 2
+	COMMA  reduce 2
+	RPAR  reduce 2
+
+
+state 9
+	Exps : Exp .  (5)
+	Exps : Exp . COMMA Exps  (6)
+
+	COMMA  shift 12
+	RPAR  reduce 5
+
+
+state 10
+	Exp : LPAR Exp COMMA Exps . RPAR COLON  (3)
+
+	RPAR  shift 13
+	.  error
+
+
+state 11
+	Exp : LPAR Exp RPAR COLON .  (4)
+
+	.  reduce 4
+
+
+state 12
+	Exps : Exp COMMA . Exps  (6)
+
+	LPAR  shift 3
+	.  error
+
+	Exp  goto 9
+	Exps  goto 14
+
+
+state 13
+	Exp : LPAR Exp COMMA Exps RPAR . COLON  (3)
+
+	COLON  shift 15
+	.  error
+
+
+state 14
+	Exps : Exp COMMA Exps .  (6)
+
+	.  reduce 6
+
+
+state 15
+	Exp : LPAR Exp COMMA Exps RPAR COLON .  (3)
+
+	.  reduce 3
+
+
+9 terminals, 5 nonterminals
+8 grammar rules, 16 states
