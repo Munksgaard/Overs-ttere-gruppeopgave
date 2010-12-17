@@ -213,7 +213,6 @@ struct
         let
           val len = length es
           val mem = "_compileTupleMem_"^newName()
-          val t1 = "_compileTuple1_"^newName()
           val code1 = [Mips.ADDI (mem, HP, "0")]
           val code2 =  [Mips.ADDI (place, mem, "0"),
                         Mips.ADDI (HP, HP, makeConst (len * 4))]
