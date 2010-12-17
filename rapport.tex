@@ -134,6 +134,10 @@ de dele af Type.sml vi har lavet mest om i.
 \end{tabular}
 
 \section{Compiler.sml}
+
+Nedenfor kan ses pseudokode for hvordan koden for de nye
+konstruktioner genereres.
+
 \begin{tabular}{|l|l|}
   \hline
   \multicolumn{2}{|l|}{CompilePat (p, v, vtable, fail) = case p of} \\
@@ -164,9 +168,6 @@ de dele af Type.sml vi har lavet mest om i.
 	& ($code_1$ @ $code_2$ @ $code_3$, $vtable_2$ @ $vtable_1$ @ $vtable$) \\
 	\hline
 \end{tabular}
-
-Nedenfor kan ses pseudokode for hvordan koden for de nye
-konstruktioner genereres.
 
 \begin{tabular}{|l|l|}
   \hline
