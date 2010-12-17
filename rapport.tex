@@ -114,7 +114,7 @@ de dele af Type.sml vi har lavet mest om i.
     decs of} \\ \hline
   (pat, e) & ty = checkExp e vtable ftable ttable \\
   & vtable1 = checkPat p ty ttable \\
-  vtable1 @ vtable \\ \hline
+  vtable1 @ vtable & \\ \hline
   (pat, e) :: decs & ty = checkExp e vtable ftable ttable \\
   & vtable1 = checkPat pat ty ttable \\
   & td = checkDec (decs, (vtable1 @ vtable), ftable, ttable) \\
@@ -134,6 +134,36 @@ de dele af Type.sml vi har lavet mest om i.
 \end{tabular}
 
 \section{Compiler.sml}
+\begin{tabular}{|l|l|}
+  \hline
+  \multicolumn{2}{|l|}{CompilePat (p, v, vtable, fail) = case p of} \\
+	\hline
+	TrueP & [place := 1] \\
+	\hline
+	FalseP & [place := 0] \\ 
+	\hline
+	NullP & [place := 0] \\ 
+	\hline
+	TupleP & ($code_1$, $vtable_1$) = compilePats(pats, v, vtable, fail, 0) \\ 
+		   & if (v = 0) \\
+		   & then Error() \\
+		   & else (code1, vtable) \\
+	\hline
+\end{tabular}
+\\
+\begin{tabular}{|l|l|}
+  \hline
+  \multicolumn{2}{|l|}{CompilePats (pats, v, vtable, fail, offset) = case pats of} \\
+	\hline
+	([], []) & ([], []) \\
+	\hline
+	(pat :: pats) & x = newvar() \\
+	& $code_1$ = LW(x, v, offset) \\
+	& $(code_2, vtable_1)$ = compilePat(pat, x, vtable, fail) \\
+	& $(code_3, vtable_2)$ = compilePats(pats, v, ($vtable_1$ @ $vtable_2$), fail, (offset + 4)) \\
+	& ($code_1$ @ $code_2$ @ $code_3$, $vtable_2$ @ $vtable_1$ @ $vtable$) \\
+	\hline
+\end{tabular}
 
 \newpage 
 
