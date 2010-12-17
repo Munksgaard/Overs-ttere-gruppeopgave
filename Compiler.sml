@@ -182,8 +182,6 @@ struct
         end
     | Cat.Let (d, e, (line, col)) =>
         let
-          val t1 = "_let1_"^newName()
-          val t2 = "_let2_"^newName()
           val fail = "_letfaillabel_"^newName()
           val errorcode     (* if match fails *)
 	    = [Mips.LABEL fail,
