@@ -20,7 +20,7 @@ struct
 
   fun tylookup x [] pos = raise Error ("Type "^x^" not found", pos)
     | tylookup x ((s, ts, p) :: table) pos = 
-        if x=s then ts else lookup x table pos
+        if x=s then ts else tylookup x table pos
 
   fun lookup x [] pos = raise Error ("Name "^x^" not found", pos)
     | lookup x ((y,v)::table) pos = if x=y then v else lookup x table pos
@@ -94,7 +94,7 @@ struct
         end
         
   (* compile expression *)
-  fun compileExp e vtable place tys =
+  fun compileExp e vtable place =
     case e of
       Cat.Num (n,pos) =>
         if n<32768 then
@@ -110,8 +110,8 @@ struct
         let
 	  val t1 = "_plus1_"^newName()
 	  val t2 = "_plus2_"^newName()
-          val code1 = compileExp e1 vtable t1 tys
-          val code2 = compileExp e2 vtable t2 tys
+          val code1 = compileExp e1 vtable t1
+          val code2 = compileExp e2 vtable t2
 	in
 	  code1 @ code2 @ [Mips.ADD (place,t1,t2)]
 	end
@@ -119,8 +119,8 @@ struct
         let
 	  val t1 = "_minus1_"^newName()
 	  val t2 = "_minus2_"^newName()
-          val code1 = compileExp e1 vtable t1 tys
-          val code2 = compileExp e2 vtable t2 tys
+          val code1 = compileExp e1 vtable t1
+          val code2 = compileExp e2 vtable t2
 	in
 	  code1 @ code2 @ [Mips.SUB (place,t1,t2)]
 	end
@@ -130,8 +130,8 @@ struct
           val t2 = "_equal2_"^newName()
           val l1 = "_equallabel1_"^newName()
           val l2 = "_equallabel2_"^newName()
-          val code1 = compileExp e1 vtable t1 tys
-          val code2 = compileExp e2 vtable t2 tys
+          val code1 = compileExp e1 vtable t1
+          val code2 = compileExp e2 vtable t2
 	in
 	  code1 @ code2 @ 
           [Mips.BNE (t1,t2,l1), 
@@ -147,8 +147,8 @@ struct
           val t2 = "_less2_"^newName()
           val l1 = "_lesslabel1_"^newName()
           val l2 = "_lesslabel2_"^newName()
-          val code1 = compileExp e1 vtable t1 tys
-          val code2 = compileExp e2 vtable t2 tys
+          val code1 = compileExp e1 vtable t1
+          val code2 = compileExp e2 vtable t2
 	in
 	  code1 @ code2 @ 
           [Mips.LUI (place, "0"),
@@ -157,7 +157,7 @@ struct
     | Cat.Not (e, pos) =>
         let
           val t = "_not_"^newName()
-          val code = compileExp e vtable t tys
+          val code = compileExp e vtable t
         in
           code @ [Mips.XORI (place, t, makeConst 1)]
         end
@@ -165,8 +165,8 @@ struct
         let
           val t1 = "_and1_"^newName()
           val t2 = "_and2_"^newName()
-          val code1 = compileExp e1 vtable t1 tys
-          val code2 = compileExp e2 vtable t2 tys
+          val code1 = compileExp e1 vtable t1
+          val code2 = compileExp e2 vtable t2
         in
           code1 @ code2 @
           [Mips.AND (place, t1, t2)]
@@ -175,8 +175,8 @@ struct
         let
           val t1 = "_or1_"^newName()
           val t2 = "_or2_"^newName()
-          val code1 = compileExp e1 vtable t1 tys
-          val code2 = compileExp e2 vtable t2 tys
+          val code1 = compileExp e1 vtable t1
+          val code2 = compileExp e2 vtable t2
         in
           code1 @ code2 @
           [Mips.OR (place, t1, t2)]
@@ -191,7 +191,7 @@ struct
 	       Mips.LI ("5",makeConst line),
 	       Mips.J "_Error_"]
           val (code1, vtable1) = compileDec d vtable fail
-          val code2 = compileExp e (vtable1 @ vtable) place tys
+          val code2 = compileExp e (vtable1 @ vtable) place
         in
           code1 @ code2
         end
@@ -200,9 +200,9 @@ struct
           val t1 = "_if_"^newName()
           val l1 = "_elselabel_"^newName()
           val l2 = "_exitlabel_"^newName()
-          val code1 = compileExp eif vtable t1 tys
-          val code2 = compileExp ethen vtable place tys
-          val code3 = compileExp eelse vtable place tys
+          val code1 = compileExp eif vtable t1
+          val code2 = compileExp ethen vtable place
+          val code3 = compileExp eelse vtable place
 	in
           code1 @
 	  [Mips.BEQ (t1, "0", l1)]
@@ -214,26 +214,23 @@ struct
         end
     | Cat.MkTuple (es, s, pos) =>
         let
-          val len = length tylookup s tys
-          val code1 = compileTuple es vtable place
+          val len = length es
+          val mem = "_compileTupleMem_"^newName()
+          val t1 = "_compileTuple1_"^newName()
+          val code1 = [Mips.ADDI (mem, HP, "0")]
+          val code2 =  [Mips.ADDI (place, mem, "0"),
+                        Mips.ADDI (HP, HP, makeConst (len * 4))]
+          val code3 = compileTuple es vtable mem
         in
-          code1
+          code1 @ code2 @ code3
         end
-(*    | Cat.MkTuple (es, s, pos) =>
-        let
-          val (code1, offset) = compileTuple es [] vtable 0
-        in
-          code1 @
-          [Mips.ADDI (place, HP, "0"),
-          Mips.ADDI (HP,HP,makeConst offset)]  (* move HP up *)
-        end *)
     | Cat.Case (e, m, (line, col)) =>
         let
           val t1 = "_case1_"^newName()
           val t2 = "_case2_"^newName()
           val fail = "_casefaillabel_"^newName()
           val endlabel = "_caseendlabel_"^newName()
-          val code1 = compileExp e vtable t1 tys
+          val code1 = compileExp e vtable t1
           val code2 = compileMatch m t1 place endlabel fail vtable
           val errorcode     (* if match fails *)
 	    = [Mips.LABEL fail,
@@ -247,7 +244,7 @@ struct
     | Cat.Apply (f,e,pos) =>
 	let
 	  val t1 = "_apply_"^newName()
-	  val code1 = compileExp e vtable t1 tys
+	  val code1 = compileExp e vtable t1
 	in
 	  code1 @
           [Mips.MOVE ("2",t1), Mips.JAL (f,["2"]), Mips.MOVE (place,"2")]
@@ -291,38 +288,21 @@ struct
           (code1 @ code2 @ code3, vtable2 @ vtable1 @ vtable)
         end
 
-  and compileTuple [] vtable place =
+  and compileTuple [] vtable mem =
         []
-    | compileTuple (e :: es) vtable place =
+    | compileTuple (e :: es) vtable mem =
         let
           val t1 = "_compileTuple1_"^newName()
           val t2 = "_compileTuple2_"^newName()
           val code1 = compileExp e vtable t1
-          val code2 = compileTuple es vtable t2
+          val code2 = compileTuple es vtable mem
         in
           code1 @
-          [Mips.SW (t1, HP, "0"),
-           Mips.ADDI (place, HP, "0"),
-           Mips.ADDI (HP, HP, makeConst 4)] @
+          [Mips.SW (t1, mem, "0"),
+           Mips.ADDI (mem, mem, makeConst 4)] @
           code2
         end
 
-(*        
-  and compileTuple [] tuplecode vtable offset = 
-        (tuplecode, offset)
-    | compileTuple (e :: es) tuplecode vtable offset  =
-        let
-          val t1 = "_tuple1_"^(Int.toString(offset))^"_"^newName()
-          val code1 = compileExp e vtable t1
-        in
-          compileTuple es
-                       (code1 @
-                        [Mips.SW (t1, HP, makeConst offset)] @
-                        tuplecode)
-                       vtable
-                       (offset + 4)
-        end
-*)
   (* code for saving and restoring callee-saves registers *)
   fun stackSave currentReg maxReg savecode restorecode offset =
     if currentReg > maxReg
@@ -381,7 +361,7 @@ struct
     let
       val tysCode = []
       val funsCode = List.concat (List.map compileFun funs)
-      val mainCode = compileExp e [] "dead" tys @ [Mips.J "_stop_"]
+      val mainCode = compileExp e [] "dead" @ [Mips.J "_stop_"]
       val (code1, _, _)
              = RegAlloc.registerAlloc mainCode [] 2 maxCaller maxReg
     in
