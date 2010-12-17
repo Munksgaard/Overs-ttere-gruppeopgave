@@ -71,8 +71,11 @@ struct
           ([Mips.MOVE (xt,v)], (x,xt)::vtable)
         end
     | Cat.TupleP (pats, pos) =>
-        compilePats pats v vtable fail 0
-        
+        let
+          val (code1, vtable1) = compilePats pats v vtable fail 0
+        in
+          ([Mips.BEQ (v, "0", fail)] @ code1, vtable1)
+        end
 (*    | _ => raise Error ("TERRIBLE FAILURE", (0,0)) *)
 
   and compilePats [] v vtable fail offset = ([], [])
@@ -281,13 +284,13 @@ struct
         (tuplecode, offset)
     | compileTuple (e :: es) tuplecode vtable offset  =
         let
-          val t1 = "_tuple1_"^newName()
+          val t1 = "_tuple1_"^(Int.toString(offset))^"_"^newName()
           val code1 = compileExp e vtable t1
         in
           compileTuple es
-                       (tuplecode @
-                        code1 @ 
-                        [Mips.SW (t1, HP, makeConst offset)])
+                       (code1 @
+                        [Mips.SW (t1, HP, makeConst offset)] @
+                        tuplecode)
                        vtable
                        (offset + 4)
         end
