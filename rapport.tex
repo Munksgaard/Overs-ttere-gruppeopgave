@@ -135,6 +135,41 @@ de dele af Type.sml vi har lavet mest om i.
 
 \section{Compiler.sml}
 
+Nedenfor kan ses pseudokode for hvordan koden for de nye
+konstruktioner genereres.
+
+\begin{tabular}{|l|l|}
+  \hline
+  \multicolumn{2}{|l|}{compileDec(dec, vtable, fail) = case dec of}
+  \\ \hline
+  [] & ([], []) \\ \hline
+  (p, e) :: ds & t := newvar() \\
+  & code1 := compileExp e vtable t \\
+  & (code2, vtable1) := compilePat p t vtable fail \\
+  & (code3, vtable2) := compileDec ds (vtable1 @ vtaale) fail \\
+  & (code1 @ code2 @ code2, vtable2 @ vtable 1 vtable) \\ \hline
+\end{tabular}
+
+\begin{tabular}{|l|l|}
+  \hline
+  \multicolumn{2}{|l|}{compileDec(exps, vtable, fail) = case exps of}
+  \\ \hline
+  [] & [] \\ \hline
+  & t1 = newvar() \\
+  & t2 = newvar() \\
+  & code1 = compileExp e vtable t1 \\
+  & code2 = compileTuple ees vtable mem \\
+  & code1 @ [SW (t1, mem, 0), mem := mem + 4] @ \\
+  & code2 \\ \hline
+\end{tabular}
+
+\section{Fejl og mangler}
+
+Vores compiler kompilerer alle test-filerne korrekt. Der er dog et par
+af error-filerne som ikke genererer fejl. Det gælder error14.cat,
+error17.cat, error18.cat og error19.cat. Fejlende skyldes manglende
+tjek i Type.sml.
+
 \newpage 
 
 \section{Bilag 1: Produktioner for Exp}
