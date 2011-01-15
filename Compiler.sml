@@ -183,6 +183,7 @@ struct
     | Cat.Let (d, e, (line, col)) =>
         let
           val fail = "_letfaillabel_"^newName()
+          val l1 = "_letlabel1_"^newName()
           val errorcode     (* if match fails *)
 	    = [Mips.LABEL fail,
 	       Mips.LI ("5",makeConst line),
@@ -190,7 +191,10 @@ struct
           val (code1, vtable1) = compileDec d vtable fail
           val code2 = compileExp e (vtable1 @ vtable) place
         in
-          code1 @ code2
+          code1 @ code2 @
+          [Mips.J l1] @ 
+          errorcode @
+          [Mips.LABEL l1]
         end
     | Cat.If (eif, ethen, eelse, pos) =>
         let
